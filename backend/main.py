@@ -10,6 +10,7 @@ from typing import Optional
 import subprocess
 
 from preprocessor import ProjectPreprocessor
+from ast_analyzer import ASTAnalyzer
 
 app = FastAPI(title="Testing Platform API")
 
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 preprocessor = ProjectPreprocessor()
+ast_analyzer = ASTAnalyzer()
 
 @app.get("/")
 async def root():
@@ -94,6 +96,10 @@ async def preprocess_project(
         
         # Run preprocessing
         results = preprocessor.analyze_project(project_path)
+        
+        # Run AST analysis
+        ast_results = ast_analyzer.analyze_codebase(Path(project_path))
+        results["ast_analysis"] = ast_results
         
         return JSONResponse(content=results)
         

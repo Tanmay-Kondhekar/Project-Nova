@@ -1,8 +1,8 @@
 # 🚀 AI Testing & Security Automation Platform
 
-> **Stage 1**: Project Preprocessing & Metadata Extraction
+> **Stage 1+**: Project Preprocessing, Code Analysis & Semantic Graphs
 
-An intelligent platform that automatically analyzes software projects, extracts metadata, and prepares them for automated testing and security scanning.
+An intelligent platform that automatically analyzes software projects, extracts metadata, tokenizes code, generates ASTs, and visualizes semantic relationships - preparing them for automated testing and security scanning.
 
 ---
 
@@ -15,6 +15,7 @@ An intelligent platform that automatically analyzes software projects, extracts 
 - [Usage](#usage)
 - [Project Structure](#project-structure)
 - [API Documentation](#api-documentation)
+- [Code Analysis Features](#code-analysis-features)
 - [Supported Languages](#supported-languages)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -24,9 +25,9 @@ An intelligent platform that automatically analyzes software projects, extracts 
 
 ## 🎯 Overview
 
-This platform is being built in stages to create a comprehensive AI-assisted testing and security automation system. **Stage 1** focuses on understanding and preprocessing software projects.
+This platform is being built in stages to create a comprehensive AI-assisted testing and security automation system. **Stage 1+** focuses on understanding, preprocessing, and deeply analyzing software projects.
 
-### What Stage 1 Does:
+### What Stage 1+ Does:
 
 ✅ Accepts project uploads (.zip files or GitHub URLs)  
 ✅ Detects programming languages and frameworks  
@@ -35,7 +36,12 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 ✅ Checks for CI/CD configurations  
 ✅ Scans for security-relevant files  
 ✅ Generates project structure visualization  
-✅ Displays results in a beautiful, modern UI  
+✅ **NEW**: Tokenizes source code (removes comments, extracts tokens)  
+✅ **NEW**: Generates Abstract Syntax Trees (AST) for Python  
+✅ **NEW**: Performs semantic analysis (functions, classes, imports)  
+✅ **NEW**: Creates semantic graphs showing code relationships  
+✅ **NEW**: Calculates code complexity metrics  
+✅ Displays results in a beautiful, tabbed UI  
 
 ---
 
@@ -52,6 +58,31 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
   - Rust: `Cargo.toml`
   - Ruby: `Gemfile`
   - PHP: `composer.json`
+
+### 🔬 Code Analysis (NEW!)
+- **Tokenization**
+  - Breaks code into tokens (keywords, operators, identifiers)
+  - Removes comments automatically
+  - Shows first 50 tokens per file
+- **AST Generation** (Python)
+  - Full Abstract Syntax Trees
+  - Up to 3 levels deep
+  - Includes line numbers and node types
+- **Semantic Extraction**
+  - Functions with arguments and decorators
+  - Classes with methods and base classes
+  - Import statements and dependencies
+  - Cyclomatic complexity calculation
+- **JavaScript/TypeScript Support**
+  - Basic tokenization
+  - Regex-based function/class detection
+  - Import extraction
+
+### 📊 Semantic Graph (NEW!)
+- Hierarchical visualization of code structure
+- File → Class → Function relationships
+- Color-coded nodes (Files: blue, Classes: purple, Functions: green)
+- Node and edge statistics
 
 ### 🧪 Test Detection
 - Automatically finds test files using pattern matching
@@ -71,10 +102,12 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 
 ### 🎨 Modern UI
 - Clean, dark-themed interface
+- **3 interactive tabs**: Overview, Code Analysis, Semantic Graph
 - Collapsible sections for organized viewing
 - Real-time processing feedback
 - Cross-browser compatible (Chrome, Firefox, Safari, Edge)
 - Responsive design
+- Custom scrollbars
 
 ---
 
@@ -85,12 +118,14 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 - **Python 3.8+** - Core language
 - **Uvicorn** - ASGI server
 - **python-multipart** - File upload handling
+- **ast** - Built-in Python AST parser
+- **tokenize** - Built-in Python tokenizer
 
 ### Frontend
 - **React 18** - UI library
 - **Vite** - Build tool and dev server
 - **Lucide React** - Icon library
-- **Vanilla CSS** - Inline styling (no Tailwind)
+- **Vanilla CSS** - Inline styling (no framework dependencies)
 
 ---
 
@@ -183,12 +218,13 @@ The UI will be available at: `http://localhost:3000` or `http://localhost:5173`
 testing-platform/
 ├── backend/
 │   ├── main.py              # FastAPI server
-│   ├── preprocessor.py      # Analysis engine
+│   ├── preprocessor.py      # Project analysis engine
+│   ├── ast_analyzer.py      # Code tokenization & AST generation
 │   └── requirements.txt     # Python dependencies
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx         # Main React component
+│   │   ├── App.jsx         # Main React component (with 3 tabs)
 │   │   ├── main.jsx        # React entry point
 │   │   └── index.css       # Global styles
 │   ├── index.html
@@ -196,7 +232,9 @@ testing-platform/
 │   └── vite.config.js
 │
 ├── .gitignore
-└── README.md
+├── README.md
+├── CODE_ANALYSIS_GUIDE.md   # Detailed code analysis documentation
+└── UPDATE_INSTRUCTIONS.md   # Update guide for existing installations
 ```
 
 ---
@@ -227,7 +265,61 @@ Analyzes a software project and returns metadata.
     "Environment file found: .env",
     ".env files may not be ignored by git"
   ],
-  "project_structure_tree": "project/\n├── manage.py\n├── ..."
+  "project_structure_tree": "project/\n├── manage.py\n├── ...",
+  "ast_analysis": {
+    "total_files_analyzed": 25,
+    "files": [
+      {
+        "relative_path": "app.py",
+        "language": "Python",
+        "line_count": 150,
+        "token_count": 450,
+        "complexity": 12,
+        "functions": [
+          {
+            "name": "process_data",
+            "line": 45,
+            "args": ["data", "options"],
+            "decorators": ["@staticmethod"]
+          }
+        ],
+        "classes": [
+          {
+            "name": "DataProcessor",
+            "line": 20,
+            "methods": ["process", "validate", "save"],
+            "bases": ["BaseProcessor"]
+          }
+        ],
+        "imports": [
+          {"module": "os", "type": "import"},
+          {"module": "typing", "names": ["List", "Dict"], "type": "from_import"}
+        ],
+        "tokens": [
+          {"type": "KEYWORD", "string": "import", "line": 1},
+          {"type": "IDENTIFIER", "string": "os", "line": 1}
+        ]
+      }
+    ],
+    "aggregate_stats": {
+      "total_tokens": 11250,
+      "total_lines": 3500,
+      "total_functions": 85,
+      "total_classes": 12,
+      "languages": {"Python": 20, "JavaScript": 5}
+    },
+    "semantic_graph": {
+      "nodes": [
+        {"id": "file_0", "type": "file", "label": "app.py", "language": "Python"},
+        {"id": "class_1", "type": "class", "label": "DataProcessor", "file": "app.py"},
+        {"id": "func_2", "type": "function", "label": "process_data", "file": "app.py"}
+      ],
+      "edges": [
+        {"from": "file_0", "to": "class_1", "type": "contains"},
+        {"from": "file_0", "to": "func_2", "type": "contains"}
+      ]
+    }
+  }
 }
 ```
 
@@ -250,34 +342,72 @@ Health check endpoint.
 
 ---
 
+## 🔬 Code Analysis Features
+
+### Tokenization
+- Breaks source code into atomic tokens
+- Removes comments and whitespace
+- Classifies tokens (keywords, operators, identifiers, etc.)
+
+### AST (Abstract Syntax Tree)
+- Full parse tree for Python files
+- Hierarchical code structure
+- Line number tracking
+
+### Semantic Analysis
+- **Functions**: Name, arguments, decorators, complexity
+- **Classes**: Name, methods, inheritance
+- **Imports**: Module dependencies
+- **Complexity**: Cyclomatic complexity score
+
+### Semantic Graph
+- Visualizes code relationships
+- Nodes: Files, Classes, Functions
+- Edges: Contains relationships
+- Hierarchical structure
+
+**For detailed information, see `CODE_ANALYSIS_GUIDE.md`**
+
+---
+
 ## 🌐 Supported Languages
 
-| Language | Dependency File | Test Pattern |
-|----------|----------------|--------------|
-| Python | requirements.txt, Pipfile | test_*.py, *_test.py |
-| JavaScript | package.json | *.test.js, *.spec.js |
-| TypeScript | package.json | *.test.ts, *.spec.ts |
-| Java | pom.xml, build.gradle | *Test.java, Test*.java |
-| Go | go.mod | *_test.go |
-| Rust | Cargo.toml | - |
-| Ruby | Gemfile | test_*.rb, *_spec.rb |
-| PHP | composer.json | - |
-| C++ | - | - |
-| C# | - | - |
-| Kotlin | - | - |
-| Scala | - | - |
-| Swift | - | - |
+| Language | Dependency File | Test Pattern | Tokenization | AST | Semantic Analysis |
+|----------|----------------|--------------|--------------|-----|-------------------|
+| Python | requirements.txt, Pipfile | test_*.py, *_test.py | ✅ Full | ✅ Full | ✅ Full |
+| JavaScript | package.json | *.test.js, *.spec.js | ✅ Basic | ❌ | ✅ Regex |
+| TypeScript | package.json | *.test.ts, *.spec.ts | ✅ Basic | ❌ | ✅ Regex |
+| Java | pom.xml, build.gradle | *Test.java, Test*.java | ❌ | ❌ | ❌ |
+| Go | go.mod | *_test.go | ❌ | ❌ | ❌ |
+| Rust | Cargo.toml | - | ❌ | ❌ | ❌ |
+| Ruby | Gemfile | test_*.rb, *_spec.rb | ❌ | ❌ | ❌ |
+| PHP | composer.json | - | ❌ | ❌ | ❌ |
+| C++ | - | - | ❌ | ❌ | ❌ |
+| C# | - | - | ❌ | ❌ | ❌ |
+| Kotlin | - | - | ❌ | ❌ | ❌ |
+| Scala | - | - | ❌ | ❌ | ❌ |
+| Swift | - | - | ❌ | ❌ | ❌ |
+
+**Legend:**
+- ✅ Full: Complete support with native parsers
+- ✅ Basic: Simple tokenization
+- ✅ Regex: Pattern-matching based
+- ❌: Not yet supported
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Stage 1 - Preprocessing (COMPLETED)
+### ✅ Stage 1+ - Preprocessing & Code Analysis (COMPLETED)
 - Project metadata extraction
 - Language and framework detection
 - Dependency analysis
 - Security file detection
-- UI for visualization
+- **Tokenization and AST generation**
+- **Semantic analysis (functions, classes, imports)**
+- **Code complexity calculation**
+- **Semantic graph visualization**
+- UI with 3 tabs (Overview, Code Analysis, Semantic Graph)
 
 ### 🔄 Stage 2 - Testing & Security (COMING SOON)
 - Automated test generation (unit, integration, E2E)
@@ -285,6 +415,7 @@ Health check endpoint.
 - DAST (Dynamic Application Security Testing)
 - Dependency vulnerability scanning
 - Container security scanning
+- Code smell detection
 
 ### 🔮 Stage 3 - AI & Automation (FUTURE)
 - AI-powered test case generation
@@ -292,6 +423,8 @@ Health check endpoint.
 - Automated fix suggestions
 - CI/CD pipeline generation
 - Comprehensive dashboard with insights
+- Call graph analysis
+- Dead code detection
 
 ---
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings } from 'lucide-react';
+import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces } from 'lucide-react';
 
 export default function TestingPlatformUI() {
   const [uploadType, setUploadType] = useState('zip');
@@ -8,6 +8,7 @@ export default function TestingPlatformUI() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const [expandedSections, setExpandedSections] = useState({
     projectInfo: true,
     dependencies: true,
@@ -15,6 +16,7 @@ export default function TestingPlatformUI() {
     warnings: true,
     structure: false
   });
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -37,6 +39,7 @@ export default function TestingPlatformUI() {
   const handlePreprocess = async () => {
     setError(null);
     setResults(null);
+    setActiveTab('overview');
     
     if (uploadType === 'zip' && !file) {
       setError('Please select a .zip file');
@@ -86,7 +89,7 @@ export default function TestingPlatformUI() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     },
     maxWidth: {
-      maxWidth: '1280px',
+      maxWidth: '1400px',
       margin: '0 auto'
     },
     header: {
@@ -204,6 +207,32 @@ export default function TestingPlatformUI() {
       alignItems: 'center',
       gap: '8px'
     },
+    tabContainer: {
+      display: 'flex',
+      gap: '8px',
+      marginBottom: '24px',
+      borderBottom: '2px solid #374151',
+      overflowX: 'auto'
+    },
+    tab: {
+      padding: '12px 24px',
+      backgroundColor: 'transparent',
+      border: 'none',
+      borderBottom: '2px solid transparent',
+      cursor: 'pointer',
+      color: '#9ca3af',
+      fontSize: '14px',
+      fontWeight: '500',
+      transition: 'all 0.2s',
+      whiteSpace: 'nowrap',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    tabActive: {
+      color: '#60a5fa',
+      borderBottomColor: '#60a5fa'
+    },
     sectionCard: {
       backgroundColor: '#1f2937',
       borderRadius: '8px',
@@ -286,7 +315,9 @@ export default function TestingPlatformUI() {
       fontSize: '12px',
       overflowX: 'auto',
       fontFamily: 'monospace',
-      color: '#d1d5db'
+      color: '#d1d5db',
+      maxHeight: '400px',
+      overflowY: 'auto'
     },
     grid: {
       display: 'grid',
@@ -299,6 +330,82 @@ export default function TestingPlatformUI() {
       alignItems: 'center',
       gap: '8px',
       fontSize: '14px'
+    },
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '16px',
+      marginBottom: '24px'
+    },
+    statCard: {
+      backgroundColor: '#1f2937',
+      padding: '16px',
+      borderRadius: '8px',
+      border: '1px solid #374151'
+    },
+    statLabel: {
+      color: '#9ca3af',
+      fontSize: '14px',
+      marginBottom: '8px'
+    },
+    statValue: {
+      color: '#ffffff',
+      fontSize: '28px',
+      fontWeight: '700'
+    },
+    fileList: {
+      maxHeight: '600px',
+      overflowY: 'auto'
+    },
+    fileItem: {
+      padding: '12px',
+      backgroundColor: '#1f2937',
+      borderRadius: '4px',
+      marginBottom: '8px',
+      cursor: 'pointer',
+      border: '1px solid #374151',
+      transition: 'all 0.2s'
+    },
+    fileItemHover: {
+      backgroundColor: '#374151',
+      borderColor: '#60a5fa'
+    },
+    fileItemActive: {
+      backgroundColor: '#374151',
+      borderColor: '#60a5fa'
+    },
+    splitView: {
+      display: 'grid',
+      gridTemplateColumns: '300px 1fr',
+      gap: '16px'
+    },
+    graphContainer: {
+      backgroundColor: '#1f2937',
+      padding: '24px',
+      borderRadius: '8px',
+      border: '1px solid #374151',
+      minHeight: '400px'
+    },
+    node: {
+      padding: '8px 12px',
+      backgroundColor: '#374151',
+      borderRadius: '4px',
+      marginBottom: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px'
+    },
+    nodeFile: {
+      borderLeft: '3px solid #3b82f6'
+    },
+    nodeClass: {
+      borderLeft: '3px solid #8b5cf6',
+      marginLeft: '20px'
+    },
+    nodeFunction: {
+      borderLeft: '3px solid #10b981',
+      marginLeft: '40px'
     }
   };
 
@@ -338,12 +445,331 @@ export default function TestingPlatformUI() {
     );
   };
 
+  const renderOverviewTab = () => (
+    <div>
+      <SectionCard title="Project Information" icon={FileCode} sectionKey="projectInfo">
+        <div>
+          <span style={{ ...styles.label, marginBottom: '8px' }}>Languages:</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+            {results.languages.map((lang, idx) => (
+              <span key={idx} style={styles.tag}>{lang}</span>
+            ))}
+          </div>
+        </div>
+        {results.framework && (
+          <div style={{ marginTop: '16px' }}>
+            <span style={styles.label}>Framework:</span>
+            <p style={{ color: '#ffffff', marginTop: '4px' }}>{results.framework}</p>
+          </div>
+        )}
+        <div style={styles.grid}>
+          <div style={styles.infoItem}>
+            <Settings size={16} color="#9ca3af" />
+            <span>
+              CI/CD: {results.ci_cd_configs ? (
+                <span style={{ color: '#4ade80' }}>Found</span>
+              ) : (
+                <span style={{ color: '#9ca3af' }}>Not found</span>
+              )}
+            </span>
+          </div>
+          <div style={styles.infoItem}>
+            <FileCode size={16} color="#9ca3af" />
+            <span>
+              Dockerfile: {results.dockerfile_found ? (
+                <span style={{ color: '#4ade80' }}>Found</span>
+              ) : (
+                <span style={{ color: '#9ca3af' }}>Not found</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Dependencies" icon={Package} sectionKey="dependencies" count={results.dependencies.length}>
+        {results.dependencies.length > 0 ? (
+          <div style={styles.depList}>
+            {results.dependencies.map((dep, idx) => (
+              <div key={idx} style={styles.depItem}>{dep}</div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: '#9ca3af' }}>No dependencies detected</p>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Test Files Detected" icon={CheckCircle} sectionKey="tests" count={results.test_files_found.length}>
+        {results.test_files_found.length > 0 ? (
+          <div>
+            {results.test_files_found.map((test, idx) => (
+              <div key={idx} style={{...styles.depItem, display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <FileCode size={16} color="#4ade80" />
+                {test}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: '#9ca3af' }}>No test files detected</p>
+        )}
+      </SectionCard>
+
+      {results.security_warnings.length > 0 && (
+        <SectionCard title="Security Warnings" icon={AlertTriangle} sectionKey="warnings" count={results.security_warnings.length}>
+          {results.security_warnings.map((warning, idx) => (
+            <div key={idx} style={styles.warning}>
+              <AlertTriangle size={16} />
+              {warning}
+            </div>
+          ))}
+        </SectionCard>
+      )}
+
+      <SectionCard title="Project Structure" icon={FolderTree} sectionKey="structure">
+        <pre style={styles.pre}>{results.project_structure_tree}</pre>
+      </SectionCard>
+    </div>
+  );
+
+  const renderCodeAnalysisTab = () => {
+    if (!results.ast_analysis) {
+      return <p style={{ color: '#9ca3af' }}>No code analysis available</p>;
+    }
+
+    const ast = results.ast_analysis;
+
+    return (
+      <div>
+        <div style={styles.statsGrid}>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Files Analyzed</div>
+            <div style={styles.statValue}>{ast.total_files_analyzed}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Total Tokens</div>
+            <div style={styles.statValue}>{ast.aggregate_stats.total_tokens.toLocaleString()}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Total Lines</div>
+            <div style={styles.statValue}>{ast.aggregate_stats.total_lines.toLocaleString()}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Functions</div>
+            <div style={styles.statValue}>{ast.aggregate_stats.total_functions}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Classes</div>
+            <div style={styles.statValue}>{ast.aggregate_stats.total_classes}</div>
+          </div>
+        </div>
+
+        <div style={styles.splitView}>
+          <div>
+            <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>Files</h3>
+            <div style={styles.fileList}>
+              {ast.files.map((file, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    ...styles.fileItem,
+                    ...(selectedFile === idx ? styles.fileItemActive : {})
+                  }}
+                  onClick={() => setSelectedFile(idx)}
+                  onMouseEnter={(e) => {
+                    if (selectedFile !== idx) {
+                      e.currentTarget.style.backgroundColor = '#374151';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedFile !== idx) {
+                      e.currentTarget.style.backgroundColor = '#1f2937';
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <FileCode size={16} color="#60a5fa" />
+                    <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' }}>
+                      {file.relative_path}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '24px' }}>
+                    {file.language} • {file.line_count} lines • {file.token_count} tokens
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            {selectedFile !== null && ast.files[selectedFile] && (
+              <div>
+                <h3 style={styles.cardTitle}>{ast.files[selectedFile].relative_path}</h3>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={styles.statsGrid}>
+                    <div style={styles.statCard}>
+                      <div style={styles.statLabel}>Lines</div>
+                      <div style={{ ...styles.statValue, fontSize: '20px' }}>{ast.files[selectedFile].line_count}</div>
+                    </div>
+                    <div style={styles.statCard}>
+                      <div style={styles.statLabel}>Tokens</div>
+                      <div style={{ ...styles.statValue, fontSize: '20px' }}>{ast.files[selectedFile].token_count}</div>
+                    </div>
+                    <div style={styles.statCard}>
+                      <div style={styles.statLabel}>Complexity</div>
+                      <div style={{ ...styles.statValue, fontSize: '20px' }}>{ast.files[selectedFile].complexity || 0}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {ast.files[selectedFile].imports && ast.files[selectedFile].imports.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ ...styles.cardTitle, fontSize: '16px' }}>Imports</h4>
+                    <div style={styles.depList}>
+                      {ast.files[selectedFile].imports.map((imp, idx) => (
+                        <div key={idx} style={styles.depItem}>
+                          {imp.type === 'from_import' ? `from ${imp.module}` : imp.module}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ast.files[selectedFile].classes && ast.files[selectedFile].classes.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ ...styles.cardTitle, fontSize: '16px' }}>Classes</h4>
+                    {ast.files[selectedFile].classes.map((cls, idx) => (
+                      <div key={idx} style={{ ...styles.depItem, marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <Braces size={16} color="#8b5cf6" />
+                          <span style={{ fontWeight: '600' }}>{cls.name}</span>
+                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>Line {cls.line}</span>
+                        </div>
+                        {cls.methods && cls.methods.length > 0 && (
+                          <div style={{ marginLeft: '24px', fontSize: '13px', color: '#9ca3af' }}>
+                            Methods: {cls.methods.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {ast.files[selectedFile].functions && ast.files[selectedFile].functions.length > 0 && (
+                  <div>
+                    <h4 style={{ ...styles.cardTitle, fontSize: '16px' }}>Functions</h4>
+                    {ast.files[selectedFile].functions.map((func, idx) => (
+                      <div key={idx} style={{ ...styles.depItem, marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Code2 size={16} color="#10b981" />
+                          <span style={{ fontWeight: '600' }}>{func.name}</span>
+                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>Line {func.line}</span>
+                        </div>
+                        {func.args && func.args.length > 0 && (
+                          <div style={{ marginLeft: '24px', fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>
+                            Args: ({func.args.join(', ')})
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {ast.files[selectedFile].tokens && ast.files[selectedFile].tokens.length > 0 && (
+                  <div style={{ marginTop: '16px' }}>
+                    <h4 style={{ ...styles.cardTitle, fontSize: '16px' }}>Tokens (first 50)</h4>
+                    <pre style={styles.pre}>
+                      {ast.files[selectedFile].tokens.slice(0, 50).map((token, idx) => (
+                        `${token.type.padEnd(15)} ${token.string}\n`
+                      )).join('')}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSemanticGraphTab = () => {
+    if (!results.ast_analysis || !results.ast_analysis.semantic_graph) {
+      return <p style={{ color: '#9ca3af' }}>No semantic graph available</p>;
+    }
+
+    const graph = results.ast_analysis.semantic_graph;
+
+    return (
+      <div>
+        <h3 style={styles.cardTitle}>Semantic Graph</h3>
+        <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+          Visualization of project structure: files, classes, and functions
+        </p>
+
+        <div style={styles.graphContainer}>
+          {graph.nodes.filter(n => n.type === 'file').map((fileNode) => (
+            <div key={fileNode.id}>
+              <div style={{ ...styles.node, ...styles.nodeFile }}>
+                <FileCode size={16} color="#3b82f6" />
+                <span>{fileNode.label}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#9ca3af' }}>
+                  {fileNode.language}
+                </span>
+              </div>
+
+              {graph.nodes.filter(n => 
+                graph.edges.some(e => e.from === fileNode.id && e.to === n.id && n.type === 'class')
+              ).map((classNode) => (
+                <div key={classNode.id} style={{ ...styles.node, ...styles.nodeClass }}>
+                  <Braces size={14} color="#8b5cf6" />
+                  <span>{classNode.label}</span>
+                </div>
+              ))}
+
+              {graph.nodes.filter(n => 
+                graph.edges.some(e => e.from === fileNode.id && e.to === n.id && n.type === 'function')
+              ).map((funcNode) => (
+                <div key={funcNode.id} style={{ ...styles.node, ...styles.nodeFunction }}>
+                  <Code2 size={14} color="#10b981" />
+                  <span>{funcNode.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: '24px', ...styles.statsGrid }}>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Total Nodes</div>
+            <div style={styles.statValue}>{graph.nodes.length}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Total Edges</div>
+            <div style={styles.statValue}>{graph.edges.length}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Files</div>
+            <div style={styles.statValue}>{graph.nodes.filter(n => n.type === 'file').length}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Classes</div>
+            <div style={styles.statValue}>{graph.nodes.filter(n => n.type === 'class').length}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>Functions</div>
+            <div style={styles.statValue}>{graph.nodes.filter(n => n.type === 'function').length}</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.maxWidth}>
         <div style={styles.header}>
           <h1 style={styles.title}>AI Testing & Security Platform</h1>
-          <p style={styles.subtitle}>Stage 1: Project Preprocessing & Analysis</p>
+          <p style={styles.subtitle}>Stage 1: Project Preprocessing & Code Analysis</p>
         </div>
 
         <div style={styles.card}>
@@ -442,109 +868,42 @@ export default function TestingPlatformUI() {
 
         {results && (
           <div>
-            <SectionCard
-              title="Project Information"
-              icon={FileCode}
-              sectionKey="projectInfo"
-            >
-              <div>
-                <span style={{ ...styles.label, marginBottom: '8px' }}>Languages:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                  {results.languages.map((lang, idx) => (
-                    <span key={idx} style={styles.tag}>{lang}</span>
-                  ))}
-                </div>
-              </div>
-              {results.framework && (
-                <div style={{ marginTop: '16px' }}>
-                  <span style={styles.label}>Framework:</span>
-                  <p style={{ color: '#ffffff', marginTop: '4px' }}>{results.framework}</p>
-                </div>
-              )}
-              <div style={styles.grid}>
-                <div style={styles.infoItem}>
-                  <Settings size={16} color="#9ca3af" />
-                  <span>
-                    CI/CD: {results.ci_cd_configs ? (
-                      <span style={{ color: '#4ade80' }}>Found</span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>Not found</span>
-                    )}
-                  </span>
-                </div>
-                <div style={styles.infoItem}>
-                  <FileCode size={16} color="#9ca3af" />
-                  <span>
-                    Dockerfile: {results.dockerfile_found ? (
-                      <span style={{ color: '#4ade80' }}>Found</span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>Not found</span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard
-              title="Dependencies"
-              icon={Package}
-              sectionKey="dependencies"
-              count={results.dependencies.length}
-            >
-              {results.dependencies.length > 0 ? (
-                <div style={styles.depList}>
-                  {results.dependencies.map((dep, idx) => (
-                    <div key={idx} style={styles.depItem}>{dep}</div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: '#9ca3af' }}>No dependencies detected</p>
-              )}
-            </SectionCard>
-
-            <SectionCard
-              title="Test Files Detected"
-              icon={CheckCircle}
-              sectionKey="tests"
-              count={results.test_files_found.length}
-            >
-              {results.test_files_found.length > 0 ? (
-                <div>
-                  {results.test_files_found.map((test, idx) => (
-                    <div key={idx} style={{...styles.depItem, display: 'flex', alignItems: 'center', gap: '8px'}}>
-                      <FileCode size={16} color="#4ade80" />
-                      {test}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: '#9ca3af' }}>No test files detected</p>
-              )}
-            </SectionCard>
-
-            {results.security_warnings.length > 0 && (
-              <SectionCard
-                title="Security Warnings"
-                icon={AlertTriangle}
-                sectionKey="warnings"
-                count={results.security_warnings.length}
+            <div style={styles.tabContainer}>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'overview' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('overview')}
               >
-                {results.security_warnings.map((warning, idx) => (
-                  <div key={idx} style={styles.warning}>
-                    <AlertTriangle size={16} />
-                    {warning}
-                  </div>
-                ))}
-              </SectionCard>
-            )}
+                <FolderTree size={16} />
+                Overview
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'code-analysis' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('code-analysis')}
+              >
+                <Code2 size={16} />
+                Code Analysis
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'semantic-graph' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('semantic-graph')}
+              >
+                <GitBranch size={16} />
+                Semantic Graph
+              </button>
+            </div>
 
-            <SectionCard
-              title="Project Structure"
-              icon={FolderTree}
-              sectionKey="structure"
-            >
-              <pre style={styles.pre}>{results.project_structure_tree}</pre>
-            </SectionCard>
+            {activeTab === 'overview' && renderOverviewTab()}
+            {activeTab === 'code-analysis' && renderCodeAnalysisTab()}
+            {activeTab === 'semantic-graph' && renderSemanticGraphTab()}
           </div>
         )}
       </div>
@@ -564,6 +923,20 @@ export default function TestingPlatformUI() {
         }
         * {
           box-sizing: border-box;
+        }
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #4b5563;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #6b7280;
         }
       `}</style>
     </div>
