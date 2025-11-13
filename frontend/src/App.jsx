@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CodeStructureMap from './CodeStructureMap';
 import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces } from 'lucide-react';
 
 export default function TestingPlatformUI() {
@@ -899,11 +900,28 @@ export default function TestingPlatformUI() {
                 <GitBranch size={16} />
                 Semantic Graph
               </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'code-structure' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('code-structure')}
+              >
+                <Braces size={16} />
+                Code Structure Map
+              </button>
             </div>
 
-            {activeTab === 'overview' && renderOverviewTab()}
-            {activeTab === 'code-analysis' && renderCodeAnalysisTab()}
-            {activeTab === 'semantic-graph' && renderSemanticGraphTab()}
+              {activeTab === 'overview' && renderOverviewTab()}
+              {activeTab === 'code-analysis' && renderCodeAnalysisTab()}
+              {activeTab === 'semantic-graph' && renderSemanticGraphTab()}
+              {activeTab === 'code-structure' && (
+                results.ast_analysis && results.ast_analysis.semantic_graph ? (
+                  <CodeStructureMap graph={results.ast_analysis.semantic_graph} />
+                ) : (
+                  <p style={{ color: '#9ca3af' }}>No semantic graph available for structure map</p>
+                )
+              )}
           </div>
         )}
       </div>
