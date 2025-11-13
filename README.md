@@ -510,7 +510,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👥 Authors
 
-- **Your Name** - Initial work
+- **Ameya**
+- **Akul**
+- **Saloni**
+- **Tanmay**
 
 ---
 
@@ -522,13 +525,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Open source community for inspiration
 
 ---
-
-## 📞 Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Contact: your-email@example.com
-
----
-
-**Built with ❤️ by the Testing Platform Team**
