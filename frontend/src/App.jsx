@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CodeStructureMap from './CodeStructureMap';
+import CFGTab from './CFGTab';
 import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces } from 'lucide-react';
 
 export default function TestingPlatformUI() {
@@ -910,6 +911,16 @@ export default function TestingPlatformUI() {
                 <Braces size={16} />
                 Code Structure Map
               </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'cfg' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('cfg')}
+              >
+                <GitBranch size={16} />
+                Control Flow Graph
+              </button>
             </div>
 
               {activeTab === 'overview' && renderOverviewTab()}
@@ -921,6 +932,9 @@ export default function TestingPlatformUI() {
                 ) : (
                   <p style={{ color: '#9ca3af' }}>No semantic graph available for structure map</p>
                 )
+              )}
+              {activeTab === 'cfg' && (
+                <CFGTab projectCFG={results.control_flow_graph} />
               )}
           </div>
         )}

@@ -1,4 +1,5 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import tempfile
@@ -11,6 +12,8 @@ import subprocess
 
 from preprocessor import ProjectPreprocessor
 from ast_analyzer import ASTAnalyzer
+from cfg_generator import build_cfg_json
+from project_cfg import build_project_cfg_json
 
 app = FastAPI(title="Testing Platform API")
 
@@ -25,6 +28,24 @@ app.add_middleware(
 
 preprocessor = ProjectPreprocessor()
 ast_analyzer = ASTAnalyzer()
+
+
+# --- CFG endpoint ---
+from pydantic import BaseModel
+
+class CodeRequest(BaseModel):
+    code: str
+
+@app.post("/cfg")
+async def generate_cfg(request: CodeRequest):
+    """
+    Accepts code and returns a control flow graph (CFG) as JSON.
+    """
+    try:
+        cfg = build_cfg_json(request.code)
+        return JSONResponse(content=cfg)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/")
 async def root():
@@ -97,10 +118,15 @@ async def preprocess_project(
         # Run preprocessing
         results = preprocessor.analyze_project(project_path)
         
+
         # Run AST analysis
         ast_results = ast_analyzer.analyze_codebase(Path(project_path))
         results["ast_analysis"] = ast_results
-        
+
+        # Run project-wide CFG analysis (Python only for now)
+        cfg = build_project_cfg_json(Path(project_path))
+        results["control_flow_graph"] = cfg
+
         return JSONResponse(content=results)
         
     except HTTPException:
