@@ -9,6 +9,7 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
   const [error, setError] = React.useState(null);
   const [filterMode, setFilterMode] = React.useState('all');
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedNodeId, setSelectedNodeId] = React.useState(null);
 
   React.useEffect(() => {
     if (!cfg || !cfg.nodes || cfg.nodes.length === 0) {
@@ -17,6 +18,29 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
     }
 
     try {
+      // Helper function to get all connected nodes (UPWARD only - ancestors/callers)
+      const getConnectedNodes = (nodeId, edges) => {
+        const connected = new Set([nodeId]);
+        const queue = [nodeId];
+        const visited = new Set();
+        
+        while (queue.length > 0) {
+          const current = queue.shift();
+          if (visited.has(current)) continue;
+          visited.add(current);
+          
+          // Only traverse UPWARD - find nodes that point TO this node
+          edges.forEach(edge => {
+            if (edge.to === current && !connected.has(edge.from)) {
+              connected.add(edge.from);
+              queue.push(edge.from);
+            }
+          });
+        }
+        
+        return connected;
+      };
+
       let filteredNodes = cfg.nodes;
       
       if (filterMode === 'connected') {
@@ -27,13 +51,27 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
       
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        filteredNodes = filteredNodes.filter(n => 
+        const matchingNodes = cfg.nodes.filter(n => 
           n.label?.toLowerCase().includes(term) || 
           n.file?.toLowerCase().includes(term)
         );
+        
+        const connectedNodeIds = new Set();
+        matchingNodes.forEach(node => {
+          const connected = getConnectedNodes(node.id, cfg.edges || []);
+          connected.forEach(id => connectedNodeIds.add(id));
+        });
+        
+        filteredNodes = filteredNodes.filter(n => connectedNodeIds.has(n.id));
       }
 
+      const connectedToSelected = selectedNodeId ? 
+        getConnectedNodes(selectedNodeId, cfg.edges || []) : new Set();
+      
       const nodes = filteredNodes.map(node => {
+        const isDimmed = selectedNodeId && !connectedToSelected.has(node.id);
+        const isHighlighted = selectedNodeId && connectedToSelected.has(node.id);
+        
         let color = { background: '#667eea', border: '#4c51bf' };
         
         if (node.external) {
@@ -76,8 +114,21 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
           },
           font: { color: '#ffffff', size: 13, face: 'Monaco, Consolas, monospace' },
           margin: 10,
-          borderWidth: 2,
-          shadow: true
+          borderWidth: isHighlighted ? 4 : 2,
+          shadow: !isDimmed,
+          opacity: isDimmed ? 0.2 : 1,
+          ...(isDimmed && {
+            color: {
+              background: '#4b5563',
+              border: '#374151',
+              highlight: { background: '#764ba2', border: '#5a3d8a' }
+            },
+            font: {
+              color: '#6b7280',
+              size: 13,
+              face: 'Monaco, Consolas, monospace'
+            }
+          })
         };
       });
 
@@ -127,6 +178,18 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
       
       if (containerRef.current && nodes.length > 0) {
         networkRef.current = new Network(containerRef.current, data, options);
+        
+        networkRef.current.on('click', (params) => {
+          if (params.nodes.length > 0) {
+            const clickedNodeId = params.nodes[0];
+            setSelectedNodeId(prev => prev === clickedNodeId ? null : clickedNodeId);
+          } else {
+            setSelectedNodeId(null);
+          }
+          // Don't zoom - maintain current view
+        });
+        
+        // Only fit on initial load
         networkRef.current.once('stabilizationIterationsDone', () => {
           networkRef.current.fit({ animation: { duration: 800 } });
         });
@@ -154,7 +217,7 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
         networkRef.current = null;
       }
     };
-  }, [cfg, filterMode, searchTerm]);
+  }, [cfg, filterMode, searchTerm, selectedNodeId]);
 
   if (error) {
     return (
@@ -210,21 +273,73 @@ const ImprovedCFGViewer = ({ cfg, title = "Control Flow Graph", showLegend = tru
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <input
-          type="text"
-          placeholder="Search functions or files..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 16px',
-            backgroundColor: '#374151',
-            border: '1px solid #4b5563',
-            borderRadius: 8,
-            color: '#ffffff',
-            fontSize: 14
-          }}
-        />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search functions or files (shows connected nodes)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '10px 16px',
+              backgroundColor: '#374151',
+              border: '1px solid #4b5563',
+              borderRadius: 8,
+              color: '#ffffff',
+              fontSize: 14
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              style={{
+                padding: '10px 16px',
+                backgroundColor: '#991b1b',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        {selectedNodeId && (
+          <div style={{
+            marginTop: 8,
+            padding: '8px 12px',
+            backgroundColor: 'rgba(96, 165, 250, 0.2)',
+            border: '1px solid #60a5fa',
+            borderRadius: 6,
+            color: '#60a5fa',
+            fontSize: 13,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span>
+              ⬆️ Showing lineage (callers) for: <strong>{cfg.nodes.find(n => n.id === selectedNodeId)?.label || selectedNodeId}</strong>
+            </span>
+            <button
+              onClick={() => setSelectedNodeId(null)}
+              style={{
+                padding: '4px 10px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600
+              }}
+            >
+              Clear Selection
+            </button>
+          </div>
+        )}
       </div>
 
       {stats && (
