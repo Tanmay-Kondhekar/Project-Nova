@@ -70,37 +70,42 @@ class ASTAnalyzer:
                     }
                     results["semantic_graph"]["nodes"].append(file_node)
                     
-                    # Add class nodes
+                    # Add class nodes (only if substantial - has methods or is exported)
                     for cls in file_analysis.get("classes", []):
-                        node_id += 1
-                        class_node = {
-                            "id": f"class_{node_id}",
-                            "type": "class",
-                            "label": cls["name"],
-                            "file": file_analysis["relative_path"]
-                        }
-                        results["semantic_graph"]["nodes"].append(class_node)
-                        results["semantic_graph"]["edges"].append({
-                            "from": file_node["id"],
-                            "to": class_node["id"],
-                            "type": "contains"
-                        })
+                        # Filter out trivial classes
+                        if cls.get("methods") or len(cls.get("name", "")) > 2:
+                            node_id += 1
+                            class_node = {
+                                "id": f"class_{node_id}",
+                                "type": "class",
+                                "label": cls["name"],
+                                "file": file_analysis["relative_path"]
+                            }
+                            results["semantic_graph"]["nodes"].append(class_node)
+                            results["semantic_graph"]["edges"].append({
+                                "from": file_node["id"],
+                                "to": class_node["id"],
+                                "type": "contains"
+                            })
                     
-                    # Add function nodes
+                    # Add function nodes (filter out private/helper functions)
                     for func in file_analysis.get("functions", []):
-                        node_id += 1
-                        func_node = {
-                            "id": f"func_{node_id}",
-                            "type": "function",
-                            "label": func["name"],
-                            "file": file_analysis["relative_path"]
-                        }
-                        results["semantic_graph"]["nodes"].append(func_node)
-                        results["semantic_graph"]["edges"].append({
-                            "from": file_node["id"],
-                            "to": func_node["id"],
-                            "type": "contains"
-                        })
+                        func_name = func["name"]
+                        # Skip private functions and trivial names
+                        if not func_name.startswith("_") and len(func_name) > 2:
+                            node_id += 1
+                            func_node = {
+                                "id": f"func_{node_id}",
+                                "type": "function",
+                                "label": func_name,
+                                "file": file_analysis["relative_path"]
+                            }
+                            results["semantic_graph"]["nodes"].append(func_node)
+                            results["semantic_graph"]["edges"].append({
+                                "from": file_node["id"],
+                                "to": func_node["id"],
+                                "type": "contains"
+                            })
                     
                     node_id += 1
                     

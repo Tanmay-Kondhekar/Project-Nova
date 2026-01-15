@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces } from 'lucide-react';
+import CodeStructureMap from './CodeStructureMap';
+import CFGTab from './CFGTab';
+import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces, Sparkles } from 'lucide-react';
+import ASSETS from './config/assets';
 
 export default function TestingPlatformUI() {
   const [uploadType, setUploadType] = useState('zip');
@@ -83,10 +86,12 @@ export default function TestingPlatformUI() {
   const styles = {
     container: {
       minHeight: '100vh',
-      backgroundColor: '#111827',
-      color: '#f3f4f6',
-      padding: '24px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: `linear-gradient(135deg, ${ASSETS.colors.background} 0%, #1e1b4b 100%)`,
+      color: ASSETS.colors.text,
+      padding: '40px 24px',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      position: 'relative',
+      overflow: 'hidden'
     },
     maxWidth: {
       maxWidth: '1400px',
@@ -96,26 +101,37 @@ export default function TestingPlatformUI() {
       marginBottom: '32px'
     },
     title: {
-      fontSize: '36px',
-      fontWeight: '700',
-      color: '#ffffff',
-      marginBottom: '8px'
+      fontSize: '48px',
+      fontWeight: '800',
+      background: 'linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+      marginBottom: '12px',
+      letterSpacing: '-0.02em'
     },
     subtitle: {
       color: '#9ca3af'
     },
     card: {
-      backgroundColor: '#1f2937',
-      borderRadius: '8px',
-      padding: '24px',
+      background: ASSETS.colors.cardBackground,
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderRadius: '16px',
+      padding: '28px',
       marginBottom: '24px',
-      border: '1px solid #374151'
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
     },
     cardTitle: {
-      fontSize: '20px',
-      fontWeight: '600',
-      marginBottom: '16px',
-      color: '#ffffff'
+      fontSize: '22px',
+      fontWeight: '700',
+      marginBottom: '20px',
+      color: '#ffffff',
+      background: 'linear-gradient(135deg, #ffffff 0%, #a78bfa 100%)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text'
     },
     buttonGroup: {
       display: 'flex',
@@ -126,31 +142,34 @@ export default function TestingPlatformUI() {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '8px 16px',
-      borderRadius: '8px',
+      padding: '10px 20px',
+      borderRadius: '10px',
       border: 'none',
       cursor: 'pointer',
       fontSize: '14px',
-      fontWeight: '500',
-      transition: 'all 0.2s'
+      fontWeight: '600',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
     },
     buttonActive: {
-      backgroundColor: '#2563eb',
+      background: ASSETS.colors.gradient,
       color: '#ffffff'
     },
     buttonInactive: {
-      backgroundColor: '#374151',
+      backgroundColor: 'rgba(55, 65, 81, 0.6)',
       color: '#d1d5db'
     },
     input: {
       width: '100%',
-      padding: '10px 16px',
-      backgroundColor: '#374151',
-      border: '1px solid #4b5563',
-      borderRadius: '8px',
+      padding: '12px 18px',
+      backgroundColor: 'rgba(30, 41, 59, 0.5)',
+      border: '1px solid rgba(167, 139, 250, 0.3)',
+      borderRadius: '10px',
       color: '#ffffff',
-      fontSize: '14px',
-      boxSizing: 'border-box'
+      fontSize: '15px',
+      boxSizing: 'border-box',
+      transition: 'all 0.3s ease',
+      outline: 'none'
     },
     label: {
       display: 'block',
@@ -170,19 +189,20 @@ export default function TestingPlatformUI() {
     },
     primaryButton: {
       width: '100%',
-      backgroundColor: '#2563eb',
+      background: ASSETS.colors.gradient,
       color: '#ffffff',
       fontWeight: '600',
-      padding: '12px',
-      borderRadius: '8px',
+      padding: '14px 24px',
+      borderRadius: '12px',
       border: 'none',
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: '8px',
+      gap: '10px',
       fontSize: '16px',
-      transition: 'background-color 0.2s'
+      transition: 'all 0.3s ease',
+      boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)'
     },
     primaryButtonDisabled: {
       backgroundColor: '#4b5563',
@@ -209,47 +229,49 @@ export default function TestingPlatformUI() {
     },
     tabContainer: {
       display: 'flex',
-      gap: '8px',
-      marginBottom: '24px',
-      borderBottom: '2px solid #374151',
+      gap: '12px',
+      marginBottom: '28px',
+      borderBottom: '2px solid rgba(167, 139, 250, 0.2)',
       overflowX: 'auto'
     },
     tab: {
-      padding: '12px 24px',
+      padding: '14px 28px',
       backgroundColor: 'transparent',
       border: 'none',
-      borderBottom: '2px solid transparent',
+      borderBottom: '3px solid transparent',
       cursor: 'pointer',
       color: '#9ca3af',
-      fontSize: '14px',
-      fontWeight: '500',
-      transition: 'all 0.2s',
+      fontSize: '15px',
+      fontWeight: '600',
+      transition: 'all 0.3s ease',
       whiteSpace: 'nowrap',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px'
+      gap: '10px'
     },
     tabActive: {
-      color: '#60a5fa',
-      borderBottomColor: '#60a5fa'
+      color: ASSETS.colors.primary,
+      borderBottomColor: ASSETS.colors.primary
     },
     sectionCard: {
-      backgroundColor: '#1f2937',
-      borderRadius: '8px',
-      border: '1px solid #374151',
+      background: 'rgba(30, 41, 59, 0.4)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '12px',
+      border: '1px solid rgba(167, 139, 250, 0.2)',
       overflow: 'hidden',
-      marginBottom: '16px'
+      marginBottom: '18px',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
     },
     sectionHeader: {
       width: '100%',
-      padding: '16px 24px',
+      padding: '18px 24px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: 'transparent',
       border: 'none',
       cursor: 'pointer',
-      transition: 'background-color 0.2s'
+      transition: 'all 0.3s ease'
     },
     sectionHeaderHover: {
       backgroundColor: '#374151'
@@ -766,10 +788,27 @@ export default function TestingPlatformUI() {
 
   return (
     <div style={styles.container}>
+      {/* Floating Background Decoration */}
+      {ASSETS.backgroundDecoration.type === 'gif' || ASSETS.backgroundDecoration.type === 'image' ? (
+        <img 
+          src={ASSETS.backgroundDecoration.url} 
+          alt="background decoration" 
+          style={ASSETS.backgroundDecoration.styles}
+        />
+      ) : (
+        <div 
+          style={ASSETS.backgroundDecoration.styles}
+          dangerouslySetInnerHTML={{ __html: ASSETS.backgroundDecoration.svg }}
+        />
+      )}
+      
       <div style={styles.maxWidth}>
         <div style={styles.header}>
-          <h1 style={styles.title}>AI Testing & Security Platform</h1>
-          <p style={styles.subtitle}>Stage 1: Project Preprocessing & Code Analysis</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '12px' }}>
+            <Sparkles size={ASSETS.branding.icon.size} color={ASSETS.branding.icon.color} />
+            <h1 style={styles.title}>{ASSETS.branding.appName}</h1>
+          </div>
+          <p style={styles.subtitle}>{ASSETS.branding.tagline}</p>
         </div>
 
         <div style={styles.card}>
@@ -899,44 +938,101 @@ export default function TestingPlatformUI() {
                 <GitBranch size={16} />
                 Semantic Graph
               </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'code-structure' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('code-structure')}
+              >
+                <Braces size={16} />
+                Code Structure Map
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'cfg' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('cfg')}
+              >
+                <GitBranch size={16} />
+                Control Flow Graph
+              </button>
             </div>
 
-            {activeTab === 'overview' && renderOverviewTab()}
-            {activeTab === 'code-analysis' && renderCodeAnalysisTab()}
-            {activeTab === 'semantic-graph' && renderSemanticGraphTab()}
+              {activeTab === 'overview' && renderOverviewTab()}
+              {activeTab === 'code-analysis' && renderCodeAnalysisTab()}
+              {activeTab === 'semantic-graph' && renderSemanticGraphTab()}
+              {activeTab === 'code-structure' && (
+                results.ast_analysis && results.ast_analysis.semantic_graph ? (
+                  <CodeStructureMap graph={results.ast_analysis.semantic_graph} />
+                ) : (
+                  <p style={{ color: '#9ca3af' }}>No semantic graph available for structure map</p>
+                )
+              )}
+              {activeTab === 'cfg' && (
+                <CFGTab projectCFG={results.control_flow_graph} />
+              )}
           </div>
         )}
       </div>
 
       <style>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-30px) rotate(5deg);
+          }
+        }
+        
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        
         input:focus {
           outline: none;
-          border-color: #3b82f6;
+          border-color: ${ASSETS.colors.primary} !important;
+          box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
         }
+        
+        button:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:active:not(:disabled) {
+          transform: translateY(0px);
+        }
+        
         button:focus {
-          outline: 2px solid #3b82f6;
+          outline: 2px solid ${ASSETS.colors.primary};
           outline-offset: 2px;
         }
+        
         * {
           box-sizing: border-box;
         }
+        
         ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 10px;
+          height: 10px;
         }
+        
         ::-webkit-scrollbar-track {
-          background: #1f2937;
+          background: rgba(30, 41, 59, 0.3);
+          border-radius: 5px;
         }
+        
         ::-webkit-scrollbar-thumb {
-          background: #4b5563;
-          border-radius: 4px;
+          background: linear-gradient(135deg, ${ASSETS.colors.primary} 0%, ${ASSETS.colors.secondary} 100%);
+          border-radius: 5px;
         }
+        
         ::-webkit-scrollbar-thumb:hover {
-          background: #6b7280;
+          background: linear-gradient(135deg, ${ASSETS.colors.secondary} 0%, ${ASSETS.colors.primary} 100%);
         }
       `}</style>
     </div>
