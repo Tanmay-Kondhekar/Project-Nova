@@ -5,25 +5,27 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RobustProjectCFGGenerator:
+class ImprovedProjectCFGGenerator:
     """
-    Enhanced project-wide Control Flow Graph generator with:
-    - Better error handling
-    - Cross-file function tracking
-    - Module import awareness
-    - Improved visualization data
+    Enhanced project-wide Control Flow Graph that:
+    - Shows ALL functions across all files
+    - Better cross-file function tracking
+    - Handles imports and module references
+    - More comprehensive visualization
     """
     
-    def __init__(self):
-        self.all_functions = {}  # func_name -> file_path
-        self.all_calls = {}  # func_name -> set of called functions
-        self.file_modules = {}  # file_path -> module_name
+    def __init__(self, include_private: bool = False, max_nodes: int = 200):
+        self.include_private = include_private
+        self.max_nodes = max_nodes
+        self.all_functions = {}  # func_name -> list of file_paths where defined
+        self.all_calls = {}  # (file, func_name) -> set of called functions
+        self.file_imports = {}  # file_path -> dict of imports
+        self.function_metadata = {}  # (file, func) -> metadata
         self.errors = []
     
     def extract_functions_from_file(self, file_path: Path) -> Tuple[Set[str], Dict[str, Set[str]]]:
         """
-        Extract functions and their calls from a single file.
-        Returns: (set of function names, dict of calls)
+        Extract ALL functions and their calls from a single file.
         """
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -41,72 +43,174 @@ class RobustProjectCFGGenerator:
         
         functions = set()
         calls = {}
+        imports = self._extract_imports(tree)
         
-        # Collect all user-defined functions (skip private ones)
+        # Store imports for this file
+        self.file_imports[str(file_path)] = imports
+        
+        # Collect ALL functions (including class methods)
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                # Skip private functions and dunder methods
-                if not node.name.startswith('_'):
-                    functions.add(node.name)
+            if isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
+                func_name = node.name
+                
+                # Skip dunder methods only (unless include_private is True)
+                if not self.include_private and func_name.startswith('__') and func_name.endswith('__'):
+                    continue
+                
+                functions.add(func_name)
+                
+                # Store metadata
+                self.function_metadata[(str(file_path), func_name)] = {
+                    'line': node.lineno,
+                    'args': [arg.arg for arg in node.args.args],
+                    'is_async': isinstance(node, ast.AsyncFunctionDef),
+                    'is_private': func_name.startswith('_'),
+                    'decorators': self._extract_decorators(node),
+                    'is_method': self._is_class_method(node, tree)
+                }
         
         # Extract function calls
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
                 func_name = node.name
-                if func_name.startswith('_'):
+                
+                if not self.include_private and func_name.startswith('__') and func_name.endswith('__'):
                     continue
                 
                 calls[func_name] = set()
                 
                 for child in ast.walk(node):
                     if isinstance(child, ast.Call):
-                        called = self._extract_called_functions(child)
+                        called = self._extract_called_functions(child, imports)
                         calls[func_name].update(called)
         
         return functions, calls
     
-    def _extract_called_functions(self, call_node: ast.Call) -> Set[str]:
+    def _extract_imports(self, tree: ast.AST) -> Dict[str, str]:
         """
-        Extract function names from a Call node.
-        Handles: func(), self.method(), obj.method()
+        Extract import statements to help resolve function calls.
+        Returns dict mapping imported names to module names.
+        """
+        imports = {}
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    name = alias.asname if alias.asname else alias.name
+                    imports[name] = alias.name
+            
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ''
+                for alias in node.names:
+                    name = alias.asname if alias.asname else alias.name
+                    imports[name] = f"{module}.{alias.name}" if module else alias.name
+        
+        return imports
+    
+    def _extract_decorators(self, node) -> List[str]:
+        """Extract decorator names."""
+        decorators = []
+        for dec in node.decorator_list:
+            if isinstance(dec, ast.Name):
+                decorators.append(dec.id)
+            elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                decorators.append(dec.func.id)
+            elif isinstance(dec, ast.Attribute):
+                decorators.append(dec.attr)
+        return decorators
+    
+    def _is_class_method(self, func_node, tree: ast.AST) -> bool:
+        """Check if a function is a class method."""
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for item in node.body:
+                    if item == func_node:
+                        return True
+        return False
+    
+    def _extract_called_functions(self, call_node: ast.Call, imports: Dict[str, str]) -> Set[str]:
+        """
+        Extract function names, handling various call patterns.
         """
         called = set()
         
         try:
-            # Direct function call
+            # Direct function call: func()
             if isinstance(call_node.func, ast.Name):
-                called.add(call_node.func.id)
+                func_name = call_node.func.id
+                called.add(func_name)
+                
+                # Check if it's an imported function
+                if func_name in imports:
+                    # Add both the alias and the original name
+                    original = imports[func_name].split('.')[-1]
+                    called.add(original)
             
-            # Attribute call (method or module function)
+            # Attribute call: obj.method() or module.func()
             elif isinstance(call_node.func, ast.Attribute):
                 method_name = call_node.func.attr
+                called.add(method_name)
                 
-                # Check if it's a self.method() call
+                # Get the object/module name
                 if isinstance(call_node.func.value, ast.Name):
-                    if call_node.func.value.id == 'self':
+                    obj_name = call_node.func.value.id
+                    
+                    # Handle different cases
+                    if obj_name == 'self':
+                        # self.method() - add method name
                         called.add(method_name)
+                    elif obj_name in imports:
+                        # imported_module.function()
+                        module_path = imports[obj_name]
+                        called.add(method_name)
+                        called.add(f"{obj_name}.{method_name}")
                     else:
-                        # Could be module.function() or obj.method()
-                        # Add method name for potential matching
+                        # obj.method() or Class.method()
                         called.add(method_name)
-                else:
-                    called.add(method_name)
+                        called.add(f"{obj_name}.{method_name}")
+                
+                # Handle chained calls
+                elif isinstance(call_node.func.value, ast.Attribute):
+                    full_path = self._get_attribute_path(call_node.func)
+                    if full_path:
+                        called.add(full_path)
+                        # Also add just the method name
+                        parts = full_path.split('.')
+                        if parts:
+                            called.add(parts[-1])
         
         except Exception as e:
-            logger.debug(f"Could not extract function from call: {e}")
+            logger.debug(f"Error extracting function call: {e}")
         
         return called
     
+    def _get_attribute_path(self, node: ast.Attribute) -> str:
+        """Get full attribute path."""
+        try:
+            parts = []
+            current = node
+            
+            while isinstance(current, ast.Attribute):
+                parts.append(current.attr)
+                current = current.value
+            
+            if isinstance(current, ast.Name):
+                parts.append(current.id)
+            
+            return '.'.join(reversed(parts))
+        except:
+            return ""
+    
     def build_project_cfg_json(self, project_path: Path) -> Dict:
         """
-        Build control flow graph for entire project.
-        Returns JSON-serializable dict with nodes and edges.
+        Build comprehensive CFG for entire project showing ALL functions.
         """
         self.all_functions = {}
         self.all_calls = {}
+        self.function_metadata = {}
         self.errors = []
         
-        # Collect all Python files
+        # Collect Python files
         python_files = []
         try:
             python_files = list(project_path.rglob('*.py'))
@@ -116,12 +220,17 @@ class RobustProjectCFGGenerator:
             return self._empty_result()
         
         # Skip common directories
-        skip_dirs = {'__pycache__', 'venv', 'env', '.git', 'node_modules', 'build', 'dist'}
+        skip_dirs = {'__pycache__', 'venv', 'env', '.git', 'node_modules', 'build', 'dist', '.venv', 'site-packages'}
         python_files = [
             f for f in python_files 
             if not any(skip_dir in f.parts for skip_dir in skip_dirs)
-            and not f.name.startswith('test_')
-            and not f.name.endswith('_test.py')
+        ]
+        
+        # Optionally skip test files for cleaner visualization
+        # Comment this out if you want to include test files
+        python_files = [
+            f for f in python_files
+            if not f.name.startswith('test_') and not f.name.endswith('_test.py')
         ]
         
         if not python_files:
@@ -138,17 +247,16 @@ class RobustProjectCFGGenerator:
                     file_count += 1
                     rel_path = str(py_file.relative_to(project_path))
                     
-                    # Store functions with their file locations
+                    # Store all functions with their locations
                     for func in functions:
                         if func not in self.all_functions:
                             self.all_functions[func] = []
                         self.all_functions[func].append(rel_path)
                     
-                    # Store calls
+                    # Store calls with file context
                     for func, targets in calls.items():
-                        if func not in self.all_calls:
-                            self.all_calls[func] = set()
-                        self.all_calls[func].update(targets)
+                        key = (rel_path, func)
+                        self.all_calls[key] = targets
             
             except Exception as e:
                 logger.warning(f"Error processing {py_file}: {e}")
@@ -158,76 +266,138 @@ class RobustProjectCFGGenerator:
             self.errors.append("No valid Python files with functions found")
             return self._empty_result()
         
-        # Build graph
+        # Build comprehensive graph
         return self._build_graph()
     
     def _build_graph(self) -> Dict:
         """
-        Build the final graph structure from collected data.
+        Build the final graph with ALL functions.
         """
-        # Find connected functions
+        # Get all unique function names
+        all_function_names = set(self.all_functions.keys())
+        
+        if not all_function_names:
+            return self._empty_result()
+        
+        # Determine connections
         connected_functions = set()
+        all_called_functions = set()
         
-        for src, targets in self.all_calls.items():
-            # Filter targets to only include functions we know about
-            valid_targets = {t for t in targets if t in self.all_functions}
+        for (file, func), targets in self.all_calls.items():
+            user_targets = {t for t in targets if t in all_function_names}
+            if user_targets:
+                connected_functions.add(func)
+                connected_functions.update(user_targets)
             
-            if valid_targets:
-                connected_functions.add(src)
-                connected_functions.update(valid_targets)
+            # Track all called functions
+            all_called_functions.update(targets)
         
-        # If no connections, include top N most common functions
-        if not connected_functions:
-            # Sort by number of occurrences across files
-            func_counts = [(f, len(files)) for f, files in self.all_functions.items()]
-            func_counts.sort(key=lambda x: x[1], reverse=True)
-            connected_functions = {f for f, _ in func_counts[:50]}  # Top 50
+        # Find functions that are called but not defined (external)
+        external_functions = all_called_functions - all_function_names
+        # Filter out obvious builtins
+        builtins_to_exclude = {'print', 'len', 'range', 'str', 'int', 'list', 'dict', 'set', 'tuple', 'open', 'type', 'isinstance', 'hasattr', 'getattr', 'setattr'}
+        external_functions = {f for f in external_functions if f not in builtins_to_exclude and not f.startswith('__')}
         
-        # Limit to reasonable size for visualization
-        if len(connected_functions) > 100:
-            # Prioritize functions with most connections
-            func_conn_counts = []
-            for func in connected_functions:
-                in_degree = sum(1 for calls in self.all_calls.values() if func in calls)
-                out_degree = len(self.all_calls.get(func, set()))
-                func_conn_counts.append((func, in_degree + out_degree))
-            
-            func_conn_counts.sort(key=lambda x: x[1], reverse=True)
-            connected_functions = {f for f, _ in func_conn_counts[:100]}
+        # Limit nodes if too many
+        nodes_to_display = all_function_names.copy()
+        warning = None
         
-        # Build nodes
+        if len(nodes_to_display) > self.max_nodes:
+            # Prioritize connected functions
+            if len(connected_functions) <= self.max_nodes:
+                nodes_to_display = connected_functions
+                warning = f"Showing {len(connected_functions)} connected functions out of {len(all_function_names)} total"
+            else:
+                # Sort by connection count and take top N
+                func_scores = []
+                for func in all_function_names:
+                    # Count incoming edges
+                    in_degree = sum(1 for (_, f), targets in self.all_calls.items() 
+                                   if func in targets)
+                    # Count outgoing edges
+                    out_degree = sum(len({t for t in targets if t in all_function_names}) 
+                                    for (_, f), targets in self.all_calls.items() 
+                                    if f == func)
+                    # Count files where function is defined
+                    file_count = len(self.all_functions.get(func, []))
+                    
+                    score = in_degree * 2 + out_degree + file_count
+                    func_scores.append((func, score))
+                
+                func_scores.sort(key=lambda x: x[1], reverse=True)
+                nodes_to_display = {f for f, _ in func_scores[:self.max_nodes]}
+                warning = f"Large codebase: showing top {self.max_nodes} most connected functions out of {len(all_function_names)} total"
+        
+        # Build nodes with rich metadata
         nodes = []
-        for func in sorted(connected_functions):
-            file_info = self.all_functions.get(func, ['unknown'])[0]
+        for func_name in sorted(nodes_to_display):
+            file_locations = self.all_functions.get(func_name, ['unknown'])
+            primary_file = file_locations[0]
+            
+            # Get metadata from primary location
+            metadata = self.function_metadata.get((primary_file, func_name), {})
+            
+            is_connected = func_name in connected_functions
+            
+            node = {
+                "id": func_name,
+                "label": func_name,
+                "file": primary_file,
+                "title": f"{func_name}\n{primary_file}\nLine: {metadata.get('line', '?')}",
+                "connected": is_connected,
+                "is_private": metadata.get('is_private', False),
+                "is_method": metadata.get('is_method', False),
+                "is_async": metadata.get('is_async', False),
+                "defined_in_files": len(file_locations),
+                "decorators": metadata.get('decorators', [])
+            }
+            nodes.append(node)
+        
+        # Add some important external references
+        for func_name in sorted(list(external_functions)[:20]):  # Limit external nodes
             nodes.append({
-                "id": func,
-                "label": func,
-                "file": file_info,
-                "title": f"{func} ({file_info})"  # Tooltip
+                "id": func_name,
+                "label": func_name,
+                "title": f"{func_name} (external reference)",
+                "external": True,
+                "connected": True
             })
         
-        # Build edges (deduplicate)
+        # Build edges
         edges = []
         edge_set = set()
+        node_ids = {n['id'] for n in nodes}
         
-        for src, targets in self.all_calls.items():
-            if src in connected_functions:
+        for (file, src_func), targets in self.all_calls.items():
+            if src_func in node_ids:
                 for tgt in targets:
-                    if tgt in connected_functions:
-                        edge_key = (src, tgt)
+                    if tgt in node_ids:
+                        edge_key = (src_func, tgt)
                         if edge_key not in edge_set:
                             edges.append({
-                                "from": src,
-                                "to": tgt
+                                "from": src_func,
+                                "to": tgt,
+                                "file": file
                             })
                             edge_set.add(edge_key)
         
-        # Calculate statistics
+        # Calculate comprehensive stats
+        isolated_functions = all_function_names - connected_functions
+        
         stats = {
-            "total_functions": len(self.all_functions),
-            "displayed_functions": len(connected_functions),
+            "total_functions": len(all_function_names),
+            "displayed_functions": len([n for n in nodes if not n.get('external')]),
             "total_calls": len(edges),
-            "files_processed": len(set(f for files in self.all_functions.values() for f in files))
+            "connected_functions": len(connected_functions),
+            "isolated_functions": len(isolated_functions),
+            "external_references": len([n for n in nodes if n.get('external')]),
+            "files_processed": len(set(f for files in self.all_functions.values() for f in files)),
+            "private_functions": sum(1 for metadata in self.function_metadata.values() 
+                                    if metadata.get('is_private', False)),
+            "async_functions": sum(1 for metadata in self.function_metadata.values() 
+                                  if metadata.get('is_async', False)),
+            "class_methods": sum(1 for metadata in self.function_metadata.values() 
+                                if metadata.get('is_method', False))
         }
         
         return {
@@ -235,11 +405,11 @@ class RobustProjectCFGGenerator:
             "edges": edges,
             "stats": stats,
             "errors": self.errors if self.errors else None,
-            "warning": "Large graphs limited to 100 most connected functions" if stats["total_functions"] > 100 else None
+            "warning": warning
         }
     
     def _empty_result(self) -> Dict:
-        """Return empty result structure with errors."""
+        """Return empty result with errors."""
         return {
             "nodes": [],
             "edges": [],
@@ -247,37 +417,71 @@ class RobustProjectCFGGenerator:
                 "total_functions": 0,
                 "displayed_functions": 0,
                 "total_calls": 0,
+                "connected_functions": 0,
+                "isolated_functions": 0,
+                "external_references": 0,
                 "files_processed": 0
             },
             "errors": self.errors
         }
 
 
-def build_project_cfg_json(project_path: Path) -> Dict:
+def build_project_cfg_json(project_path: Path, include_private: bool = False, max_nodes: int = 200) -> Dict:
     """
     Main entry point for project CFG generation.
-    Wrapper function for backward compatibility.
+    
+    Args:
+        project_path: Root path of the project
+        include_private: Whether to include private functions (_function)
+        max_nodes: Maximum number of nodes to display (default: 200)
     """
-    generator = RobustProjectCFGGenerator()
+    generator = ImprovedProjectCFGGenerator(
+        include_private=include_private,
+        max_nodes=max_nodes
+    )
     return generator.build_project_cfg_json(project_path)
 
 
-# Example usage
 if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1:
         project_path = Path(sys.argv[1])
-        generator = RobustProjectCFGGenerator()
-        cfg = generator.build_project_cfg_json(project_path)
         
-        print("Project CFG Result:")
-        print(f"Stats: {cfg['stats']}")
-        print(f"Nodes: {len(cfg['nodes'])}")
-        print(f"Edges: {len(cfg['edges'])}")
-        if cfg.get('errors'):
-            print(f"Errors: {cfg['errors']}")
+        print("Generating Improved Project-Wide CFG...")
+        print("=" * 60)
+        
+        cfg = build_project_cfg_json(project_path, include_private=False)
+        
+        print(f"\n📊 Statistics:")
+        for key, value in cfg['stats'].items():
+            print(f"  {key}: {value}")
+        
+        print(f"\n📦 Nodes: {len(cfg['nodes'])}")
+        print(f"🔗 Edges: {len(cfg['edges'])}")
+        
         if cfg.get('warning'):
-            print(f"Warning: {cfg['warning']}")
+            print(f"\n⚠️  Warning: {cfg['warning']}")
+        
+        if cfg.get('errors'):
+            print(f"\n❌ Errors:")
+            for error in cfg['errors']:
+                print(f"  - {error}")
+        
+        # Show sample nodes
+        print(f"\n📝 Sample nodes (first 10):")
+        for node in cfg['nodes'][:10]:
+            status = "🔗" if node.get('connected') else "⭕"
+            external = " [EXT]" if node.get('external') else ""
+            private = " [PRIV]" if node.get('is_private') else ""
+            method = " [METHOD]" if node.get('is_method') else ""
+            print(f"  {status} {node['label']}{external}{private}{method}")
+            print(f"      File: {node.get('file', 'N/A')}")
+        
+        # Show sample edges
+        if cfg['edges']:
+            print(f"\n🔗 Sample edges (first 10):")
+            for edge in cfg['edges'][:10]:
+                print(f"  {edge['from']} → {edge['to']}")
     else:
-        print("Usage: python project_cfg.py <project_path>")
+        print("Usage: python improved_project_cfg.py <project_path>")

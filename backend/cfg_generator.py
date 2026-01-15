@@ -4,22 +4,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RobustCFGGenerator:
+class ImprovedCFGGenerator:
     """
-    Enhanced Control Flow Graph generator with better error handling
-    and more robust parsing
+    Enhanced Control Flow Graph generator that shows ALL functions
+    and properly detects various types of function calls.
     """
     
-    def __init__(self):
+    def __init__(self, include_private: bool = False):
+        self.include_private = include_private
         self.user_functions = set()
         self.calls = {}
         self.errors = []
+        self.function_metadata = {}  # Store additional info about functions
     
     def extract_user_functions_and_calls(self, source_code: str) -> Dict[str, Set[str]]:
         """
-        Parses source code and returns a dict mapping each user-defined function
-        to the set of user-defined functions it calls.
-        Filters out private functions (starting with _).
+        Parses source code and returns a dict mapping each function
+        to the set of functions it calls.
+        Now includes ALL functions, not just connected ones.
         """
         try:
             tree = ast.parse(source_code)
@@ -34,37 +36,64 @@ class RobustCFGGenerator:
         
         self.user_functions = set()
         self.calls = {}
+        self.function_metadata = {}
         
-        # First pass: collect all user-defined function names (skip private)
+        # First pass: collect ALL function names with metadata
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                # Skip private functions and dunder methods
-                if not node.name.startswith('_'):
-                    self.user_functions.add(node.name)
-        
-        # Second pass: for each function, collect calls to user-defined functions
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
                 func_name = node.name
-                if func_name.startswith('_'):  # Skip private functions
+                
+                # Include private functions if flag is set, otherwise skip dunder methods only
+                if not self.include_private and func_name.startswith('__') and func_name.endswith('__'):
+                    continue
+                
+                self.user_functions.add(func_name)
+                self.function_metadata[func_name] = {
+                    'line': node.lineno,
+                    'args': [arg.arg for arg in node.args.args],
+                    'is_async': isinstance(node, ast.AsyncFunctionDef),
+                    'is_private': func_name.startswith('_'),
+                    'decorators': self._extract_decorators(node)
+                }
+        
+        # Second pass: extract ALL function calls for each function
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
+                func_name = node.name
+                
+                # Skip dunder methods only
+                if func_name.startswith('__') and func_name.endswith('__'):
                     continue
                 
                 self.calls[func_name] = set()
                 
-                # Walk through the function body
+                # Walk through the function body to find all calls
                 for child in ast.walk(node):
                     if isinstance(child, ast.Call):
                         called_funcs = self._extract_called_function(child)
+                        # Add ALL calls, even if they're to external functions
+                        # We'll filter to user functions later for visualization
                         for called in called_funcs:
-                            if called in self.user_functions:
-                                self.calls[func_name].add(called)
+                            self.calls[func_name].add(called)
         
         return self.calls
+    
+    def _extract_decorators(self, node) -> List[str]:
+        """Extract decorator names from a function."""
+        decorators = []
+        for dec in node.decorator_list:
+            if isinstance(dec, ast.Name):
+                decorators.append(dec.id)
+            elif isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name):
+                decorators.append(dec.func.id)
+            elif isinstance(dec, ast.Attribute):
+                decorators.append(dec.attr)
+        return decorators
     
     def _extract_called_function(self, call_node: ast.Call) -> List[str]:
         """
         Extract function name(s) from a Call node.
-        Handles various call patterns.
+        Handles: func(), self.method(), obj.method(), Class.method(), module.func()
         """
         called = []
         
@@ -73,96 +102,141 @@ class RobustCFGGenerator:
             if isinstance(call_node.func, ast.Name):
                 called.append(call_node.func.id)
             
-            # Method calls: self.method() or obj.method()
+            # Attribute calls: obj.method(), self.method(), Class.method()
             elif isinstance(call_node.func, ast.Attribute):
+                method_name = call_node.func.attr
+                called.append(method_name)
+                
+                # Also try to get the full path for context
                 if isinstance(call_node.func.value, ast.Name):
-                    if call_node.func.value.id == 'self':
-                        called.append(call_node.func.attr)
-                    # Could also be class.method() - add method name
-                    else:
-                        called.append(call_node.func.attr)
+                    # self.method() or obj.method()
+                    obj_name = call_node.func.value.id
+                    if obj_name != 'self':
+                        # Could be Class.method() or module.function()
+                        full_name = f"{obj_name}.{method_name}"
+                        called.append(full_name)
+                
+                # Handle chained calls: obj.attr.method()
+                elif isinstance(call_node.func.value, ast.Attribute):
+                    full_path = self._get_full_attribute_path(call_node.func)
+                    if full_path:
+                        called.append(full_path)
             
-            # Nested attribute calls: obj.attr.method()
-            elif isinstance(call_node.func, ast.Attribute):
-                attr_name = self._get_full_attribute_name(call_node.func)
-                if attr_name:
-                    # Extract just the final method name
-                    parts = attr_name.split('.')
-                    if parts:
-                        called.append(parts[-1])
+            # Subscript calls: obj[key]()
+            elif isinstance(call_node.func, ast.Subscript):
+                # Handle dict-based function calls
+                if isinstance(call_node.func.value, ast.Name):
+                    called.append(call_node.func.value.id)
         
         except Exception as e:
-            logger.warning(f"Failed to extract function name from call: {e}")
+            logger.debug(f"Could not extract function from call: {e}")
         
         return called
     
-    def _get_full_attribute_name(self, node: ast.Attribute) -> str:
+    def _get_full_attribute_path(self, node: ast.Attribute) -> str:
         """
-        Recursively extract full attribute name (e.g., 'obj.attr.method')
+        Recursively extract full attribute path (e.g., 'module.submodule.function')
         """
         try:
-            if isinstance(node.value, ast.Name):
-                return f"{node.value.id}.{node.attr}"
-            elif isinstance(node.value, ast.Attribute):
-                return f"{self._get_full_attribute_name(node.value)}.{node.attr}"
-            else:
-                return node.attr
+            parts = []
+            current = node
+            
+            while isinstance(current, ast.Attribute):
+                parts.append(current.attr)
+                current = current.value
+            
+            if isinstance(current, ast.Name):
+                parts.append(current.id)
+            
+            return '.'.join(reversed(parts))
         except:
             return ""
     
     def build_cfg_json(self, source_code: str) -> Dict:
         """
         Returns a JSON-serializable dict representing the control flow graph.
-        Nodes: user-defined public functions
-        Edges: function calls between them
+        NOW INCLUDES ALL FUNCTIONS, not just connected ones.
         """
         calls = self.extract_user_functions_and_calls(source_code)
         
         if not calls:
-            # If no functions found, return empty graph with error info
             return {
                 "nodes": [],
                 "edges": [],
                 "stats": {
                     "total_functions": 0,
                     "total_calls": 0,
-                    "connected_functions": 0
+                    "connected_functions": 0,
+                    "isolated_functions": 0
                 },
                 "errors": self.errors if self.errors else ["No functions found in code"]
             }
         
-        # Only include connected functions (functions that call or are called)
+        # Include ALL user-defined functions in the graph
+        all_function_names = set(calls.keys())
+        
+        # Also include functions that are called but not defined (external references)
+        called_but_not_defined = set()
+        for targets in calls.values():
+            for target in targets:
+                # Only include simple names that match our function patterns
+                if '.' not in target and target not in all_function_names:
+                    # Check if this might be a user function (not a builtin)
+                    if not target.startswith('__') and target not in ['print', 'len', 'range', 'str', 'int', 'list', 'dict', 'set', 'tuple']:
+                        called_but_not_defined.add(target)
+        
+        # Determine which functions are truly connected
         connected_functions = set()
         for src, targets in calls.items():
-            if targets:  # Function makes calls
+            # Filter to only user-defined functions
+            user_targets = {t for t in targets if t in all_function_names}
+            if user_targets:
                 connected_functions.add(src)
-                connected_functions.update(targets)
+                connected_functions.update(user_targets)
         
-        # Also include functions that are called but don't call others
+        # Also mark functions as connected if they are called by others
         for src, targets in calls.items():
             for target in targets:
-                connected_functions.add(target)
+                if target in all_function_names:
+                    connected_functions.add(target)
         
-        # If no connections found, include all functions
-        if not connected_functions:
-            connected_functions = set(calls.keys())
-        
-        # Build nodes
+        # Build nodes for ALL functions
         nodes = []
-        for name in sorted(connected_functions):
+        for func_name in sorted(all_function_names):
+            metadata = self.function_metadata.get(func_name, {})
+            is_connected = func_name in connected_functions
+            
+            node = {
+                "id": func_name,
+                "label": func_name,
+                "connected": is_connected,
+                "line": metadata.get('line'),
+                "is_private": metadata.get('is_private', False),
+                "is_async": metadata.get('is_async', False),
+                "decorators": metadata.get('decorators', [])
+            }
+            nodes.append(node)
+        
+        # Add nodes for external references (called but not defined)
+        for func_name in sorted(called_but_not_defined):
             nodes.append({
-                "id": name,
-                "label": name
+                "id": func_name,
+                "label": func_name,
+                "connected": True,
+                "external": True
             })
         
-        # Build edges (deduplicate)
+        # Build edges
         edges = []
         edge_set = set()
         
+        all_node_ids = {n['id'] for n in nodes}
+        
         for src, targets in calls.items():
-            if src in connected_functions:
+            if src in all_node_ids:
                 for tgt in targets:
-                    if tgt in connected_functions:
+                    # Include edges to user functions AND external references
+                    if tgt in all_node_ids:
                         edge_key = (src, tgt)
                         if edge_key not in edge_set:
                             edges.append({
@@ -171,12 +245,18 @@ class RobustCFGGenerator:
                             })
                             edge_set.add(edge_key)
         
-        # Calculate stats
+        # Calculate comprehensive stats
+        isolated_functions = all_function_names - connected_functions
+        
         stats = {
-            "total_functions": len(calls),
-            "total_calls": sum(len(targets) for targets in calls.values()),
+            "total_functions": len(all_function_names),
+            "displayed_functions": len(nodes),
+            "total_calls": len(edges),
             "connected_functions": len(connected_functions),
-            "isolated_functions": len(calls) - len(connected_functions)
+            "isolated_functions": len(isolated_functions),
+            "external_references": len(called_but_not_defined),
+            "private_functions": sum(1 for m in self.function_metadata.values() if m.get('is_private', False)),
+            "async_functions": sum(1 for m in self.function_metadata.values() if m.get('is_async', False))
         }
         
         return {
@@ -187,18 +267,16 @@ class RobustCFGGenerator:
         }
 
 
-def build_cfg_json(source_code: str) -> Dict:
+def build_cfg_json(source_code: str, include_private: bool = False) -> Dict:
     """
     Main entry point for CFG generation.
-    Wrapper function for backward compatibility.
     """
-    generator = RobustCFGGenerator()
+    generator = ImprovedCFGGenerator(include_private=include_private)
     return generator.build_cfg_json(source_code)
 
 
 # Example usage and testing
 if __name__ == "__main__":
-    # Test with sample code
     test_code = """
 def calculate_sum(a, b):
     result = add_numbers(a, b)
@@ -215,16 +293,53 @@ def complex_calculation(x, y):
     mult_result = multiply(sum_result, 2)
     return mult_result
 
-def _private_function():
-    # This should be ignored
-    pass
+def isolated_function():
+    # This function doesn't call anything and isn't called
+    return 42
+
+def _private_helper():
+    return "helper"
+
+def uses_private():
+    return _private_helper()
+
+class Calculator:
+    def add(self, a, b):
+        return self.validate(a) + self.validate(b)
+    
+    def validate(self, num):
+        return num if num > 0 else 0
+    
+    def calculate(self):
+        result = self.add(5, 10)
+        return multiply(result, 2)
 """
     
-    generator = RobustCFGGenerator()
+    print("Testing Improved CFG Generator:")
+    print("=" * 60)
+    
+    # Test without private functions
+    generator = ImprovedCFGGenerator(include_private=False)
     cfg = generator.build_cfg_json(test_code)
     
-    print("CFG Result:")
-    print(f"Nodes: {cfg['nodes']}")
-    print(f"Edges: {cfg['edges']}")
-    print(f"Stats: {cfg['stats']}")
-    print(f"Errors: {cfg['errors']}")
+    print(f"\nStats: {cfg['stats']}")
+    print(f"\nNodes ({len(cfg['nodes'])}):")
+    for node in cfg['nodes']:
+        status = "🔗" if node.get('connected') else "⭕"
+        external = " [EXTERNAL]" if node.get('external') else ""
+        private = " [PRIVATE]" if node.get('is_private') else ""
+        print(f"  {status} {node['label']}{external}{private}")
+    
+    print(f"\nEdges ({len(cfg['edges'])}):")
+    for edge in cfg['edges']:
+        print(f"  {edge['from']} → {edge['to']}")
+    
+    # Test with private functions
+    print("\n" + "=" * 60)
+    print("Testing with include_private=True:")
+    print("=" * 60)
+    
+    generator2 = ImprovedCFGGenerator(include_private=True)
+    cfg2 = generator2.build_cfg_json(test_code)
+    print(f"\nStats: {cfg2['stats']}")
+    print(f"Total nodes: {len(cfg2['nodes'])}")
