@@ -1,527 +1,489 @@
-# 🚀 AI Testing & Security Automation Platform
+# Joern Static Analysis Setup Guide
 
-> **Stage 1+**: Project Preprocessing, Code Analysis & Semantic Graphs
+## Prerequisites
 
-An intelligent platform that automatically analyzes software projects, extracts metadata, tokenizes code, generates ASTs, and visualizes semantic relationships - preparing them for automated testing and security scanning.
+### Required Software
 
----
+1. **Python 3.8 or higher**
+   ```bash
+   python3 --version
+   # Should show: Python 3.8.x or higher
+   ```
 
-## 📋 Table of Contents
+2. **Docker**
+   ```bash
+   # Install Docker (Ubuntu/Debian)
+   sudo apt-get update
+   sudo apt-get install docker.io
+   
+   # Install Docker (macOS)
+   # Download from: https://docs.docker.com/desktop/mac/install/
+   
+   # Install Docker (Windows)
+   # Download from: https://docs.docker.com/desktop/windows/install/
+   
+   # Verify installation
+   docker --version
+   docker info
+   ```
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
-- [Code Analysis Features](#code-analysis-features)
-- [Supported Languages](#supported-languages)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+3. **Docker Permissions** (Linux only)
+   ```bash
+   # Add your user to docker group
+   sudo usermod -aG docker $USER
+   
+   # Log out and back in, then verify
+   docker run hello-world
+   ```
 
----
+### Optional Software
 
-## 🎯 Overview
-
-This platform is being built in stages to create a comprehensive AI-assisted testing and security automation system. **Stage 1+** focuses on understanding, preprocessing, and deeply analyzing software projects.
-
-### What Stage 1+ Does:
-
-✅ Accepts project uploads (.zip files or GitHub URLs)  
-✅ Detects programming languages and frameworks  
-✅ Extracts dependencies from multiple package managers  
-✅ Identifies existing test files  
-✅ Checks for CI/CD configurations  
-✅ Scans for security-relevant files  
-✅ Generates project structure visualization  
-✅ **NEW**: Tokenizes source code (removes comments, extracts tokens)  
-✅ **NEW**: Generates Abstract Syntax Trees (AST) for Python  
-✅ **NEW**: Performs semantic analysis (functions, classes, imports)  
-✅ **NEW**: Creates semantic graphs showing code relationships  
-✅ **NEW**: Calculates code complexity metrics  
-✅ Displays results in a beautiful, tabbed UI  
-
----
-
-## ✨ Features
-
-### 🔍 Project Analysis
-- **Multi-language detection**: Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, PHP, C++, C#, Kotlin, Scala, Swift
-- **Framework identification**: React, Next.js, Vue.js, Angular, Django, Flask, FastAPI, Spring Boot, Express.js, and more
-- **Dependency extraction** from:
-  - Python: `requirements.txt`, `Pipfile`, `pyproject.toml`
-  - JavaScript/Node: `package.json`, `yarn.lock`
-  - Java: `pom.xml`, `build.gradle`
-  - Go: `go.mod`
-  - Rust: `Cargo.toml`
-  - Ruby: `Gemfile`
-  - PHP: `composer.json`
-
-### 🔬 Code Analysis (NEW!)
-- **Tokenization**
-  - Breaks code into tokens (keywords, operators, identifiers)
-  - Removes comments automatically
-  - Shows first 50 tokens per file
-- **AST Generation** (Python)
-  - Full Abstract Syntax Trees
-  - Up to 3 levels deep
-  - Includes line numbers and node types
-- **Semantic Extraction**
-  - Functions with arguments and decorators
-  - Classes with methods and base classes
-  - Import statements and dependencies
-  - Cyclomatic complexity calculation
-- **JavaScript/TypeScript Support**
-  - Basic tokenization
-  - Regex-based function/class detection
-  - Import extraction
-
-### 📊 Semantic Graph (NEW!)
-- Hierarchical visualization of code structure
-- File → Class → Function relationships
-- Color-coded nodes (Files: blue, Classes: purple, Functions: green)
-- Node and edge statistics
-
-### 🧪 Test Detection
-- Automatically finds test files using pattern matching
-- Supports common test naming conventions across languages
-- Lists all detected test files with paths
-
-### 🔒 Security Checks
-- Detects sensitive files (`.env`, `.pem`, `.key`)
-- Warns about exposed credentials
-- Checks `.gitignore` configuration
-- Flags potential security issues
-
-### 🐳 DevOps Detection
-- CI/CD configuration detection (GitHub Actions, GitLab CI, Jenkins, CircleCI, Travis CI)
-- Dockerfile presence check
-- Container configuration analysis
-
-### 🎨 Modern UI
-- Clean, dark-themed interface
-- **3 interactive tabs**: Overview, Code Analysis, Semantic Graph
-- Collapsible sections for organized viewing
-- Real-time processing feedback
-- Cross-browser compatible (Chrome, Firefox, Safari, Edge)
-- Responsive design
-- Custom scrollbars
+4. **Graphviz** (for SVG visualization)
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install graphviz
+   
+   # macOS
+   brew install graphviz
+   
+   # Windows
+   # Download from: https://graphviz.org/download/
+   
+   # Verify installation
+   dot -V
+   ```
 
 ---
 
-## 🛠️ Tech Stack
+## Installation
 
-### Backend
-- **FastAPI** - Modern Python web framework
-- **Python 3.8+** - Core language
-- **Uvicorn** - ASGI server
-- **python-multipart** - File upload handling
-- **ast** - Built-in Python AST parser
-- **tokenize** - Built-in Python tokenizer
-
-### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **Lucide React** - Icon library
-- **Vanilla CSS** - Inline styling (no framework dependencies)
-
----
-
-## 📦 Installation
-
-### Prerequisites
-
-- **Python 3.8+** ([Download](https://www.python.org/downloads/))
-- **Node.js 16+** and npm ([Download](https://nodejs.org/))
-- **Git** ([Download](https://git-scm.com/)) - for GitHub repo cloning
-
-### Backend Setup
+### Step 1: Clone or Download Files
 
 ```bash
-# Navigate to backend directory
-cd backend
+# Create project directory
+mkdir joern-analysis
+cd joern-analysis
 
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Copy the following files:
+# - joern_analyzer.py
+# - examples.py
+# - DOCUMENTATION.md
+# - README.md (this file)
 ```
 
-### Frontend Setup
+### Step 2: Verify Python Dependencies
+
+The implementation uses only Python standard library, so no additional packages needed!
 
 ```bash
-# Navigate to frontend directory
-cd frontend
+python3 -c "import subprocess, tempfile, pathlib, dataclasses, logging; print('✓ All dependencies available')"
+```
 
-# Install dependencies
-npm install
+### Step 3: Pull Joern Docker Image
+
+```bash
+# This will be done automatically on first run, but you can pre-pull:
+docker pull ghcr.io/joernio/joern:nightly
+
+# Verify image is available
+docker images | grep joern
 ```
 
 ---
 
-## 🚀 Usage
+## Quick Start
 
-### Starting the Backend
-
-```bash
-cd backend
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-python main.py
-```
-
-The API will be available at: `http://localhost:8000`
-
-### Starting the Frontend
+### Test Installation
 
 ```bash
-cd frontend
-npm run dev
-```
-
-The UI will be available at: `http://localhost:3000` or `http://localhost:5173`
-
-### Using the Application
-
-1. **Choose Upload Method**:
-   - Click "Upload .zip" to upload a zipped project folder
-   - Click "GitHub URL" to analyze a public GitHub repository
-
-2. **Upload/Enter URL**:
-   - Select your `.zip` file, OR
-   - Paste a GitHub repository URL (e.g., `https://github.com/username/repo`)
-
-3. **Run Preprocessing**:
-   - Click "Run Preprocessing"
-   - Wait for analysis to complete (typically 5-30 seconds)
-
-4. **View Results**:
-   - Explore detected languages and frameworks
-   - Review dependencies
-   - Check identified test files
-   - View security warnings
-   - Examine project structure
-
----
-
-## 📁 Project Structure
-
-```
-testing-platform/
-├── backend/
-│   ├── main.py              # FastAPI server
-│   ├── preprocessor.py      # Project analysis engine
-│   ├── ast_analyzer.py      # Code tokenization & AST generation
-│   └── requirements.txt     # Python dependencies
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx         # Main React component (with 3 tabs)
-│   │   ├── main.jsx        # React entry point
-│   │   └── index.css       # Global styles
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-│
-├── .gitignore
-├── README.md
-├── CODE_ANALYSIS_GUIDE.md   # Detailed code analysis documentation
-└── UPDATE_INSTRUCTIONS.md   # Update guide for existing installations
-```
-
----
-
-## 📡 API Documentation
-
-### `POST /preprocess`
-
-Analyzes a software project and returns metadata.
-
-**Request:**
-- Method: `POST`
-- Content-Type: `multipart/form-data`
-- Body:
-  - `file`: .zip file (optional)
-  - `github_url`: GitHub repository URL (optional)
-
-**Response:**
-```json
-{
-  "languages": ["Python", "JavaScript"],
-  "framework": "Django",
-  "dependencies": ["django", "requests", "pytest"],
-  "test_files_found": ["tests/test_models.py", "tests/test_views.py"],
-  "ci_cd_configs": true,
-  "dockerfile_found": true,
-  "security_warnings": [
-    "Environment file found: .env",
-    ".env files may not be ignored by git"
-  ],
-  "project_structure_tree": "project/\n├── manage.py\n├── ...",
-  "ast_analysis": {
-    "total_files_analyzed": 25,
-    "files": [
-      {
-        "relative_path": "app.py",
-        "language": "Python",
-        "line_count": 150,
-        "token_count": 450,
-        "complexity": 12,
-        "functions": [
-          {
-            "name": "process_data",
-            "line": 45,
-            "args": ["data", "options"],
-            "decorators": ["@staticmethod"]
-          }
-        ],
-        "classes": [
-          {
-            "name": "DataProcessor",
-            "line": 20,
-            "methods": ["process", "validate", "save"],
-            "bases": ["BaseProcessor"]
-          }
-        ],
-        "imports": [
-          {"module": "os", "type": "import"},
-          {"module": "typing", "names": ["List", "Dict"], "type": "from_import"}
-        ],
-        "tokens": [
-          {"type": "KEYWORD", "string": "import", "line": 1},
-          {"type": "IDENTIFIER", "string": "os", "line": 1}
-        ]
-      }
-    ],
-    "aggregate_stats": {
-      "total_tokens": 11250,
-      "total_lines": 3500,
-      "total_functions": 85,
-      "total_classes": 12,
-      "languages": {"Python": 20, "JavaScript": 5}
-    },
-    "semantic_graph": {
-      "nodes": [
-        {"id": "file_0", "type": "file", "label": "app.py", "language": "Python"},
-        {"id": "class_1", "type": "class", "label": "DataProcessor", "file": "app.py"},
-        {"id": "func_2", "type": "function", "label": "process_data", "file": "app.py"}
-      ],
-      "edges": [
-        {"from": "file_0", "to": "class_1", "type": "contains"},
-        {"from": "file_0", "to": "func_2", "type": "contains"}
-      ]
+# Create a simple test file
+cat > Test.java << 'EOF'
+public class Test {
+    public static void main(String[] args) {
+        System.out.println("Hello, Joern!");
     }
-  }
 }
+EOF
+
+# Run analysis
+python3 joern_analyzer.py Test.java
+
+# You should see:
+# - CPG generation messages
+# - Graph extraction confirmation
+# - Output paths
 ```
 
-**Status Codes:**
-- `200`: Success
-- `400`: Invalid input (bad file type, invalid URL)
-- `408`: Git clone timeout
-- `500`: Server error
+### Run Example Scripts
 
-### `GET /`
+```bash
+# Run all examples
+python3 examples.py
 
-Health check endpoint.
+# This will create:
+# - Multiple sample source files
+# - Analysis results in various directories
+# - DOT and SVG visualizations
+```
 
-**Response:**
-```json
-{
-  "message": "AI Testing & Security Platform API - Stage 1"
+---
+
+## Usage Patterns
+
+### Pattern 1: Quick Analysis
+
+```python
+from joern_analyzer import analyze_code_with_joern
+
+# Analyze and get results
+result = analyze_code_with_joern("mycode.java")
+
+# Access CPG
+print(result.cpg_bin_path)
+
+# Access graphs
+print(result.graphs.keys())
+```
+
+### Pattern 2: Persistent Storage
+
+```python
+# Save results to specific location
+result = analyze_code_with_joern(
+    "mycode.java",
+    output_dir="/path/to/storage"
+)
+
+# All artifacts saved to /path/to/storage/
+```
+
+### Pattern 3: Development/Debugging
+
+```python
+# Keep workspace for inspection
+result = analyze_code_with_joern(
+    "mycode.java",
+    keep_workspace=True
+)
+
+# Inspect workspace
+print(f"Workspace: {result.workspace_path}")
+# Contains: input/, output/, scripts/
+```
+
+---
+
+## Directory Structure
+
+After running examples, you'll have:
+
+```
+joern-analysis/
+├── joern_analyzer.py          # Main implementation
+├── examples.py                 # Usage examples
+├── DOCUMENTATION.md            # Technical documentation
+├── README.md                   # This file
+│
+├── analysis_results/           # Example 2 output
+│   ├── cpg.bin
+│   ├── ast.dot
+│   ├── cfg.dot
+│   └── ...
+│
+├── visualization_output/       # Example 4 output
+│   ├── cpg.bin
+│   ├── ast.svg
+│   ├── cfg.svg
+│   └── ...
+│
+└── /tmp/joern_analysis_*/      # Temporary workspaces
+    ├── input/
+    ├── output/
+    ├── analyze.sc
+    └── export.sc
+```
+
+---
+
+## Troubleshooting
+
+### Issue: "Docker is not running"
+
+**Solution:**
+```bash
+# Linux
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# macOS
+# Start Docker Desktop application
+
+# Windows
+# Start Docker Desktop application
+```
+
+### Issue: "Permission denied" when running Docker
+
+**Solution (Linux):**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and back in
+# Or use newgrp
+newgrp docker
+
+# Test
+docker run hello-world
+```
+
+### Issue: "Joern image pull failed"
+
+**Solution:**
+```bash
+# Check internet connection
+ping -c 3 google.com
+
+# Try manual pull
+docker pull ghcr.io/joernio/joern:nightly
+
+# Check Docker Hub status
+# https://status.docker.com/
+```
+
+### Issue: "CPG generation failed"
+
+**Possible causes:**
+1. Source code has syntax errors
+2. Unsupported language
+3. Out of memory
+
+**Solution:**
+```python
+# Use keep_workspace=True to debug
+result = analyze_code_with_joern(
+    "code.java",
+    keep_workspace=True
+)
+
+# Check workspace logs
+# Examine: result.workspace_path/analyze.sc
+```
+
+### Issue: "Graph extraction incomplete"
+
+**Solution:**
+```python
+# Check which graphs were successfully extracted
+result = analyze_code_with_joern("code.java")
+print(f"Available: {list(result.graphs.keys())}")
+
+# Not all exports may succeed due to Scala/Java quirks
+# Use available graphs and report issues
+```
+
+### Issue: "Graphviz not found"
+
+**Solution:**
+```bash
+# Install Graphviz
+# Ubuntu/Debian
+sudo apt-get install graphviz
+
+# macOS
+brew install graphviz
+
+# Verify
+dot -V
+
+# Re-run analysis
+python3 examples.py
+```
+
+---
+
+## Performance Tuning
+
+### For Large Codebases
+
+```python
+# Joern may require more memory
+# Increase Docker memory limit in Docker Desktop settings
+# Recommended: 4GB+ for large projects
+```
+
+### For Multiple Analyses
+
+```python
+# Generate CPG once, reuse multiple times
+result = analyze_code_with_joern(
+    "project/",
+    output_dir="persistent_cpg",
+    keep_workspace=True
+)
+
+cpg_path = result.cpg_bin_path
+
+# Now you can load this CPG in custom Joern queries
+# without regenerating it
+```
+
+---
+
+## Testing
+
+### Unit Test Example
+
+```python
+import unittest
+from pathlib import Path
+from joern_analyzer import analyze_code_with_joern
+
+class TestJoernAnalyzer(unittest.TestCase):
+    
+    def setUp(self):
+        # Create test file
+        self.test_file = Path("test.java")
+        self.test_file.write_text("""
+public class Test {
+    public static void main(String[] args) {
+        System.out.println("Test");
+    }
 }
+""")
+    
+    def tearDown(self):
+        # Cleanup
+        if self.test_file.exists():
+            self.test_file.unlink()
+    
+    def test_basic_analysis(self):
+        result = analyze_code_with_joern(self.test_file)
+        
+        # Verify CPG was generated
+        self.assertTrue(result.cpg_bin_path.exists())
+        
+        # Verify graphs were extracted
+        self.assertIn('ast_dot', result.graphs)
+        self.assertIn('cfg_dot', result.graphs)
+        
+        # Verify source info
+        self.assertEqual(result.source_info['type'], 'file')
+
+if __name__ == '__main__':
+    unittest.main()
 ```
 
 ---
 
-## 🔬 Code Analysis Features
+## Advanced Usage
 
-### Tokenization
-- Breaks source code into atomic tokens
-- Removes comments and whitespace
-- Classifies tokens (keywords, operators, identifiers, etc.)
+### Custom Joern Queries
 
-### AST (Abstract Syntax Tree)
-- Full parse tree for Python files
-- Hierarchical code structure
-- Line number tracking
+After generating CPG, you can run custom Joern queries:
 
-### Semantic Analysis
-- **Functions**: Name, arguments, decorators, complexity
-- **Classes**: Name, methods, inheritance
-- **Imports**: Module dependencies
-- **Complexity**: Cyclomatic complexity score
-
-### Semantic Graph
-- Visualizes code relationships
-- Nodes: Files, Classes, Functions
-- Edges: Contains relationships
-- Hierarchical structure
-
-**For detailed information, see `CODE_ANALYSIS_GUIDE.md`**
-
----
-
-## 🌐 Supported Languages
-
-| Language | Dependency File | Test Pattern | Tokenization | AST | Semantic Analysis |
-|----------|----------------|--------------|--------------|-----|-------------------|
-| Python | requirements.txt, Pipfile | test_*.py, *_test.py | ✅ Full | ✅ Full | ✅ Full |
-| JavaScript | package.json | *.test.js, *.spec.js | ✅ Basic | ❌ | ✅ Regex |
-| TypeScript | package.json | *.test.ts, *.spec.ts | ✅ Basic | ❌ | ✅ Regex |
-| Java | pom.xml, build.gradle | *Test.java, Test*.java | ❌ | ❌ | ❌ |
-| Go | go.mod | *_test.go | ❌ | ❌ | ❌ |
-| Rust | Cargo.toml | - | ❌ | ❌ | ❌ |
-| Ruby | Gemfile | test_*.rb, *_spec.rb | ❌ | ❌ | ❌ |
-| PHP | composer.json | - | ❌ | ❌ | ❌ |
-| C++ | - | - | ❌ | ❌ | ❌ |
-| C# | - | - | ❌ | ❌ | ❌ |
-| Kotlin | - | - | ❌ | ❌ | ❌ |
-| Scala | - | - | ❌ | ❌ | ❌ |
-| Swift | - | - | ❌ | ❌ | ❌ |
-
-**Legend:**
-- ✅ Full: Complete support with native parsers
-- ✅ Basic: Simple tokenization
-- ✅ Regex: Pattern-matching based
-- ❌: Not yet supported
-
----
-
-## 🗺️ Roadmap
-
-### ✅ Stage 1+ - Preprocessing & Code Analysis (COMPLETED)
-- Project metadata extraction
-- Language and framework detection
-- Dependency analysis
-- Security file detection
-- **Tokenization and AST generation**
-- **Semantic analysis (functions, classes, imports)**
-- **Code complexity calculation**
-- **Semantic graph visualization**
-- UI with 3 tabs (Overview, Code Analysis, Semantic Graph)
-
-### 🔄 Stage 2 - Testing & Security (COMING SOON)
-- Automated test generation (unit, integration, E2E)
-- SAST (Static Application Security Testing)
-- DAST (Dynamic Application Security Testing)
-- Dependency vulnerability scanning
-- Container security scanning
-- Code smell detection
-
-### 🔮 Stage 3 - AI & Automation (FUTURE)
-- AI-powered test case generation
-- Vulnerability explanation with AI
-- Automated fix suggestions
-- CI/CD pipeline generation
-- Comprehensive dashboard with insights
-- Call graph analysis
-- Dead code detection
-
----
-
-## 🧪 Testing the Platform
-
-### Sample Projects to Test
-
-**Python:**
 ```bash
-# Flask example
-https://github.com/pallets/flask
+# Start interactive Joern shell with CPG loaded
+docker run -it --rm \
+  -v $(pwd)/analysis_results:/workspace \
+  ghcr.io/joernio/joern:nightly \
+  joern
+
+# In Joern shell:
+joern> loadCpg("/workspace/cpg.bin")
+joern> cpg.method.name.l
+joern> cpg.call.code.l
 ```
 
-**JavaScript:**
-```bash
-# React example
-https://github.com/facebook/create-react-app
+### Integration with CI/CD
+
+```python
+# In CI pipeline (e.g., GitHub Actions)
+import os
+from joern_analyzer import analyze_code_with_joern
+
+def ci_analysis():
+    # Get source from CI environment
+    source_dir = os.getenv("GITHUB_WORKSPACE", ".")
+    
+    # Run analysis
+    result = analyze_code_with_joern(
+        source_dir,
+        output_dir="ci_artifacts"
+    )
+    
+    # Save artifacts
+    # (Will be uploaded by CI)
+    print(f"::set-output name=cpg_path::{result.cpg_bin_path}")
+
+if __name__ == "__main__":
+    ci_analysis()
 ```
 
-**Create Your Own Test Project:**
-```bash
-mkdir my-test-project
-cd my-test-project
+---
 
-# Create some files
-echo "flask==2.3.0" > requirements.txt
-echo "def test_example(): pass" > test_app.py
-mkdir src
-echo "# Main app" > src/app.py
+## Support and Resources
 
-# Zip it
-zip -r my-project.zip .
-```
+### Documentation
+- **This implementation**: See DOCUMENTATION.md
+- **Joern official docs**: https://docs.joern.io/
+- **CPG specification**: https://cpg.joern.io/
+
+### Community
+- **Joern Gitter**: https://gitter.im/joern-code-analyzer/community
+- **GitHub Issues**: https://github.com/joernio/joern/issues
+
+### Example Projects
+- **Joern examples**: https://github.com/joernio/joern/tree/master/querydb
+- **CPG tutorials**: https://docs.joern.io/cpgql/
 
 ---
 
-## 🐛 Troubleshooting
+## What's Next?
 
-### Backend Issues
+After setting up and running basic analyses, you can:
 
-**Port 8000 already in use:**
-```bash
-# Kill the process
-# Windows: netstat -ano | findstr :8000
-# macOS/Linux: lsof -ti:8000 | xargs kill -9
-```
+1. **Explore the CPG**
+   - Load CPG in interactive Joern shell
+   - Run custom queries
+   - Export specific subgraphs
 
-**Git clone fails:**
-- Ensure Git is installed: `git --version`
-- Check internet connection
-- Verify the GitHub URL is correct and public
+2. **Build Custom Analyses**
+   - Use generated graphs as input
+   - Implement vulnerability detection
+   - Calculate code metrics
+   - Identify patterns
 
-### Frontend Issues
+3. **Integrate with Tools**
+   - Export to graph databases (Neo4j)
+   - Visualize in graph tools (Gephi)
+   - Process with NetworkX
+   - Analyze with custom scripts
 
-**Blank page or errors:**
-- Check browser console (F12)
-- Ensure backend is running at `http://localhost:8000`
-- Verify CORS settings in `main.py`
-
-**CORS errors:**
-- Confirm backend is running
-- Check that frontend URL is in CORS `allow_origins`
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+4. **Extend Functionality**
+   - Add support for more languages
+   - Implement custom graph exports
+   - Create domain-specific analyses
+   - Build CI/CD integrations
 
 ---
 
-## 📄 License
+## License and Attribution
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This implementation uses:
+- **Joern**: Apache 2.0 License
+- **Python**: PSF License
+- **Docker**: Apache 2.0 License
 
----
-
-## 👥 Authors
-
-- **Ameya**
-- **Akul**
-- **Saloni**
-- **Tanmay**
+Please refer to respective projects for full license terms.
 
 ---
 
-## 🙏 Acknowledgments
+## Version History
 
-- FastAPI for the excellent web framework
-- React team for the powerful UI library
-- Lucide for the beautiful icons
-- Open source community for inspiration
-
----
+- **v1.0** (2026-02-01)
+  - Initial implementation
+  - Core CPG generation
+  - Multi-format graph export
+  - Visualization support
+  - Comprehensive documentation
