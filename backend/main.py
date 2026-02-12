@@ -29,6 +29,7 @@ AWS_STATUS_TABLE_NAME = "job-status-table"
 AWS_REGION = "ap-south-1"
 
 from decimal import Decimal
+from urllib.parse import urlparse
 
 def normalize(obj):
     if isinstance(obj, Decimal):
@@ -38,6 +39,23 @@ def normalize(obj):
     if isinstance(obj, list):
         return [normalize(v) for v in obj]
     return obj
+
+def extract_repo_name(git_url: str) -> str:
+    """
+    Extract repository name from git URL
+    e.g., https://github.com/user/repo.git -> user/repo
+    """
+    if not git_url:
+        return "Unknown"
+    try:
+        parsed = urlparse(git_url)
+        path = parsed.path.strip('/')
+        # Remove .git extension if present
+        if path.endswith('.git'):
+            path = path[:-4]
+        return path
+    except:
+        return git_url
 
 
 # Initialize AWS client
@@ -89,7 +107,9 @@ async def submit_aws_job(request: AWSJobRequest):
         return JSONResponse(content={
             "job_id": job_id,
             "status": "SUBMITTED",
-            "message": "Job submitted successfully"
+            "message": "Job submitted successfully",
+            "git_url": request.github_url,
+            "branch": request.branch
         })
     except Exception as e:
         logger.error(f"Failed to submit AWS job: {e}")
@@ -170,7 +190,7 @@ async def get_aws_job_result(job_id: str):
 @app.get("/aws-jobs")
 async def list_aws_jobs():
     """
-    List all AWS jobs from DynamoDB
+    List all AWS jobs from DynamoDB with enhanced metadata
     """
     if not aws_client:
         raise HTTPException(status_code=503, detail="AWS client not initialized")
@@ -180,12 +200,28 @@ async def list_aws_jobs():
         response = aws_client.table.scan()
         items = response.get('Items', [])
         
+        # Enhance each job with additional metadata
+        enhanced_jobs = []
+        for item in items:
+            enhanced_job = dict(item)
+            
+            # Extract repo name from git_url
+            if 'git_url' in item:
+                enhanced_job['repo_name'] = extract_repo_name(item['git_url'])
+            else:
+                enhanced_job['repo_name'] = 'Unknown'
+            
+            # Use updated_at if available, otherwise use timestamp
+            enhanced_job['display_time'] = item.get('updated_at') or item.get('timestamp', 'N/A')
+            
+            enhanced_jobs.append(enhanced_job)
+        
         # Sort by timestamp (newest first)
-        items.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        enhanced_jobs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         
         return JSONResponse(content=normalize({
-            "jobs": items,
-            "count": len(items)
+            "jobs": enhanced_jobs,
+            "count": len(enhanced_jobs)
         }))
         
     except Exception as e:
