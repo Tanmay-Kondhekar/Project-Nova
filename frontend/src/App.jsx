@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CodeStructureMap from './CodeStructureMap';
 import CFGTab from './CFGTab';
-import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces, Sparkles } from 'lucide-react';
+import StatusBox from './StatusBox';
+import AnalysisReports from './AnalysisReports';
+import { Upload, Github, Play, Loader2, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, FileCode, Package, FolderTree, Settings, Code2, GitBranch, Braces, Sparkles, Bell } from 'lucide-react';
 import ASSETS from './config/assets';
 
 export default function TestingPlatformUI() {
@@ -20,6 +22,193 @@ export default function TestingPlatformUI() {
     structure: false
   });
   const [selectedFile, setSelectedFile] = useState(null);
+
+  // AWS Job state
+  const [awsJobId, setAwsJobId] = useState(null);
+  const [awsJobStatus, setAwsJobStatus] = useState(null);
+  const [showStatusBox, setShowStatusBox] = useState(false);
+  const [isStatusBoxMinimized, setIsStatusBoxMinimized] = useState(false);
+
+  // LocalStorage keys
+  const STORAGE_KEYS = {
+    UPLOAD_TYPE: 'testingPlatform_uploadType',
+    REPO_URL: 'testingPlatform_repoUrl',
+    RESULTS: 'testingPlatform_results',
+    ACTIVE_TAB: 'testingPlatform_activeTab',
+    AWS_JOB_ID: 'testingPlatform_awsJobId',
+    AWS_JOB_STATUS: 'testingPlatform_awsJobStatus',
+    STATUS_BOX_MINIMIZED: 'testingPlatform_statusBoxMinimized'
+  };
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedUploadType = localStorage.getItem(STORAGE_KEYS.UPLOAD_TYPE);
+      const savedRepoUrl = localStorage.getItem(STORAGE_KEYS.REPO_URL);
+      const savedResults = localStorage.getItem(STORAGE_KEYS.RESULTS);
+      const savedActiveTab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
+      const savedAwsJobId = localStorage.getItem(STORAGE_KEYS.AWS_JOB_ID);
+      const savedAwsJobStatus = localStorage.getItem(STORAGE_KEYS.AWS_JOB_STATUS);
+      const savedMinimized = localStorage.getItem(STORAGE_KEYS.STATUS_BOX_MINIMIZED);
+
+      if (savedUploadType) setUploadType(savedUploadType);
+      if (savedRepoUrl) setRepoUrl(savedRepoUrl);
+      if (savedResults) setResults(JSON.parse(savedResults));
+      if (savedActiveTab) setActiveTab(savedActiveTab);
+      if (savedAwsJobId) {
+        setAwsJobId(savedAwsJobId);
+        setShowStatusBox(true);
+      }
+      if (savedAwsJobStatus) {
+        setAwsJobStatus(JSON.parse(savedAwsJobStatus));
+      }
+      if (savedMinimized) {
+        setIsStatusBoxMinimized(savedMinimized === 'true');
+      }
+    } catch (err) {
+      console.error('Error loading from localStorage:', err);
+    }
+  }, []);
+
+  // Save state to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.UPLOAD_TYPE, uploadType);
+    } catch (err) {
+      console.error('Error saving uploadType:', err);
+    }
+  }, [uploadType]);
+
+  useEffect(() => {
+    try {
+      if (repoUrl) {
+        localStorage.setItem(STORAGE_KEYS.REPO_URL, repoUrl);
+      }
+    } catch (err) {
+      console.error('Error saving repoUrl:', err);
+    }
+  }, [repoUrl]);
+
+  useEffect(() => {
+    try {
+      if (results) {
+        localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(results));
+      }
+    } catch (err) {
+      console.error('Error saving results:', err);
+    }
+  }, [results]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, activeTab);
+    } catch (err) {
+      console.error('Error saving activeTab:', err);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    try {
+      if (awsJobId) {
+        localStorage.setItem(STORAGE_KEYS.AWS_JOB_ID, awsJobId);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.AWS_JOB_ID);
+      }
+    } catch (err) {
+      console.error('Error saving awsJobId:', err);
+    }
+  }, [awsJobId]);
+
+  useEffect(() => {
+    try {
+      if (awsJobStatus) {
+        localStorage.setItem(STORAGE_KEYS.AWS_JOB_STATUS, JSON.stringify(awsJobStatus));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.AWS_JOB_STATUS);
+      }
+    } catch (err) {
+      console.error('Error saving awsJobStatus:', err);
+    }
+  }, [awsJobStatus]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.STATUS_BOX_MINIMIZED, isStatusBoxMinimized.toString());
+    } catch (err) {
+      console.error('Error saving statusBoxMinimized:', err);
+    }
+  }, [isStatusBoxMinimized]);
+
+  // Poll AWS job status
+  useEffect(() => {
+    if (!awsJobId) return;
+
+    // Don't poll if job is already in a terminal state
+    if (awsJobStatus?.status === 'COMPLETED' || awsJobStatus?.status === 'FAILED') {
+      return;
+    }
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/aws-job-status/${awsJobId}`);
+        
+        if (!response.ok) {
+          console.error('Failed to fetch job status');
+          return;
+        }
+
+        const status = await response.json();
+        setAwsJobStatus(status);
+
+        // If completed, fetch results
+        if (status.status === 'COMPLETED') {
+          try {
+            const resultResponse = await fetch(`http://localhost:8000/aws-job-result/${awsJobId}`);
+            
+            if (resultResponse.ok) {
+              const resultData = await resultResponse.json();
+              setAwsJobStatus(prev => ({
+                ...prev,
+                files: resultData.files
+              }));
+            }
+          } catch (err) {
+            console.error('Error fetching results:', err);
+          }
+        }
+      } catch (err) {
+        console.error('Error polling job status:', err);
+      }
+    };
+
+    // Initial poll
+    pollStatus();
+
+    // Set up polling interval (5 seconds as per frontend_client.py)
+    const intervalId = setInterval(pollStatus, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [awsJobId, awsJobStatus?.status]);
+
+  const handleCloseStatusBox = () => {
+    setShowStatusBox(false);
+    setIsStatusBoxMinimized(true);
+  };
+
+  const handleReopenStatusBox = () => {
+    setShowStatusBox(true);
+    setIsStatusBoxMinimized(false);
+  };
+
+  const handleDismissJob = () => {
+    setShowStatusBox(false);
+    setAwsJobId(null);
+    setAwsJobStatus(null);
+    setIsStatusBoxMinimized(false);
+    localStorage.removeItem(STORAGE_KEYS.AWS_JOB_ID);
+    localStorage.removeItem(STORAGE_KEYS.AWS_JOB_STATUS);
+    localStorage.removeItem(STORAGE_KEYS.STATUS_BOX_MINIMIZED);
+  };
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -63,8 +252,41 @@ export default function TestingPlatformUI() {
         formData.append('file', file);
       } else {
         formData.append('github_url', repoUrl);
+        
+        // For GitHub URLs, ALSO submit to AWS in the background
+        // This happens asynchronously and doesn't block local preprocessing
+        fetch('http://localhost:8000/submit-aws-job', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            github_url: repoUrl,
+            branch: 'main'
+          }),
+        })
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Failed to submit AWS job');
+        })
+        .then(data => {
+          setAwsJobId(data.job_id);
+          setAwsJobStatus({
+            job_id: data.job_id,
+            status: data.status
+          });
+          setShowStatusBox(true);
+        })
+        .catch(err => {
+          console.error('AWS job submission failed:', err);
+          // Don't show error to user - AWS is background task
+          // Local preprocessing continues regardless
+        });
       }
 
+      // Run local preprocessing (for BOTH .zip and GitHub URL)
       const response = await fetch('http://localhost:8000/preprocess', {
         method: 'POST',
         body: formData,
@@ -614,7 +836,7 @@ export default function TestingPlatformUI() {
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '24px' }}>
-                    {file.language} • {file.line_count} lines • {file.token_count} tokens
+                    {file.language} â€¢ {file.line_count} lines â€¢ {file.token_count} tokens
                   </div>
                 </div>
               ))}
@@ -811,6 +1033,47 @@ export default function TestingPlatformUI() {
           <p style={styles.subtitle}>{ASSETS.branding.tagline}</p>
         </div>
 
+        {/* Reopen StatusBox Button */}
+        {isStatusBoxMinimized && awsJobId && (
+          <div style={{
+            position: 'fixed',
+            top: 20,
+            right: 20,
+            zIndex: 999
+          }}>
+            <button
+              onClick={handleReopenStatusBox}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 16px',
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 20px rgba(37, 99, 235, 0.5)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.4)';
+              }}
+              title="Show AWS job status"
+            >
+              <Bell size={16} />
+              {awsJobStatus?.status === 'COMPLETED' ? 'View Results' : 'View Job Status'}
+            </button>
+          </div>
+        )}
+
         <div style={styles.card}>
           <h2 style={styles.cardTitle}>Upload Project</h2>
           
@@ -958,6 +1221,16 @@ export default function TestingPlatformUI() {
                 <GitBranch size={16} />
                 Control Flow Graph
               </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'analysis-reports' ? styles.tabActive : {})
+                }}
+                onClick={() => setActiveTab('analysis-reports')}
+              >
+                <FileCode size={16} />
+                Analysis Reports
+              </button>
             </div>
 
               {activeTab === 'overview' && renderOverviewTab()}
@@ -973,9 +1246,19 @@ export default function TestingPlatformUI() {
               {activeTab === 'cfg' && (
                 <CFGTab projectCFG={results.control_flow_graph} />
               )}
+              {activeTab === 'analysis-reports' && <AnalysisReports />}
           </div>
         )}
       </div>
+
+      {/* AWS Job Status Box */}
+      {showStatusBox && awsJobStatus && (
+        <StatusBox
+          jobStatus={awsJobStatus}
+          onClose={handleCloseStatusBox}
+          onDismiss={handleDismissJob}
+        />
+      )}
 
       <style>{`
         @keyframes float {
