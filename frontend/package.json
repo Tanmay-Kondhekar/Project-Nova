@@ -13,13 +13,9 @@
     "dagre": "^0.8.5",
     "lucide-react": "^0.552.0",
     "react": "^19.1.1",
-<<<<<<< HEAD
     "react-diff-viewer-continued": "^4.1.2",
     "react-dom": "^19.1.1",
     "react-syntax-highlighter": "^16.1.0",
-=======
-    "react-dom": "^19.1.1",
->>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
     "reactflow": "^11.11.4",
     "vis-network": "^10.0.2"
   },
