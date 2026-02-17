@@ -1,0 +1,74 @@
+================================================================================
+ANALYSIS COMPLETE!
+================================================================================
+
+Results:
+  Total functions analyzed: 28
+  Vulnerable functions:     0
+  Safe functions:           28
+
+Report saved to: C:\Users\ameya_pfrlra\vuln_system\python\ml_vulnerability_report.txt
+
+================================================================================
+Open ml_vulnerability_report.txt for full details
+================================================================================
+
+
+✓ Processing complete - Report generated
+
+[Step 5/5] Running repair engine to generate repairs_output.txt...
+Exception in thread Thread-11 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\subprocess.py", line 1599, in _readerthread
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+    buffer.append(fh.read())
+                  ^^^^^^^^^
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+                  ^^^^^^^^^
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+  File "C:\Users\ameya_pfrlra\anaconda3\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+Processing failed: Repair output not found at C:\Users\ameya_pfrlra\vuln_system\python\repairs_output.txt
+Cleaned up cloned repository
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 324: character maps to <undefined>
+Processing failed: Repair output not found at C:\Users\ameya_pfrlra\vuln_system\python\repairs_output.txt
+Cleaned up cloned repository
+Job failed: Processing failed
+Status updated: 7a16d660-936a-43c1-85af-8a8388c3fc15 -> FAILED
+Processing failed: Repair output not found at C:\Users\ameya_pfrlra\vuln_system\python\repairs_output.txt
+Cleaned up cloned repository
+Job failed: Processing failed
+Status updated: 7a16d660-936a-43c1-85af-8a8388c3fc15 -> FAILED
+
+Received 1 message(s)
+Stats: 0/100 jobs today, 2 SQS requests
+Job failed: Processing failed
+Status updated: 7a16d660-936a-43c1-85af-8a8388c3fc15 -> FAILED
+
+Received 1 message(s)
+Stats: 0/100 jobs today, 2 SQS request
