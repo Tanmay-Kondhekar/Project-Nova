@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { Download, Clock, CheckCircle, AlertTriangle, RefreshCw, FileText, Loader2, ChevronDown, ChevronRight, Eye, Copy, X, Shield, Bug, Code, Zap, Terminal, Activity, Search, TrendingUp, Package, GitBranch, AlertCircle, Info } from 'lucide-react';
+=======
+import { Download, Clock, CheckCircle, AlertTriangle, RefreshCw, FileText, Loader2, ChevronDown, ChevronRight, Eye } from 'lucide-react';
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
 
 const AnalysisReports = () => {
   const [jobs, setJobs] = useState([]);
@@ -10,16 +14,23 @@ const AnalysisReports = () => {
   const [jobResults, setJobResults] = useState({});
   const [loadingResults, setLoadingResults] = useState({});
   const [selectedFile, setSelectedFile] = useState({});
+<<<<<<< HEAD
   const [copySuccess, setCopySuccess] = useState({});
   const [expandedSections, setExpandedSections] = useState({});
   const [searchTerm, setSearchTerm] = useState({});
   const [highlightedText, setHighlightedText] = useState({});
+=======
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
 
   const fetchJobs = async () => {
     try {
       setRefreshing(true);
       const response = await fetch('http://localhost:8000/aws-jobs');
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
       if (!response.ok) {
         throw new Error('Failed to fetch jobs');
       }
@@ -41,12 +52,20 @@ const AnalysisReports = () => {
   }, []);
 
   const toggleJobExpansion = async (jobId, status) => {
+<<<<<<< HEAD
+=======
+    // Toggle expansion state
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
     const isExpanding = !expandedJobs[jobId];
     setExpandedJobs(prev => ({
       ...prev,
       [jobId]: isExpanding
     }));
 
+<<<<<<< HEAD
+=======
+    // If expanding and job is completed, fetch results
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
     if (isExpanding && status === 'COMPLETED' && !jobResults[jobId]) {
       await fetchJobResults(jobId);
     }
@@ -56,12 +75,17 @@ const AnalysisReports = () => {
     try {
       setLoadingResults(prev => ({ ...prev, [jobId]: true }));
       const response = await fetch(`http://localhost:8000/aws-job-result/${jobId}`);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
       if (!response.ok) {
         throw new Error('Failed to fetch job results');
       }
 
       const data = await response.json();
+<<<<<<< HEAD
 
       setJobResults(prev => ({
         ...prev,
@@ -69,6 +93,11 @@ const AnalysisReports = () => {
           files: data.files || {},
           original_files: data.original_files || {}
         }
+=======
+      setJobResults(prev => ({
+        ...prev,
+        [jobId]: data.files || {}
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
       }));
     } catch (err) {
       console.error('Error fetching job results:', err);
@@ -84,6 +113,7 @@ const AnalysisReports = () => {
   const handleFileSelect = (jobId, fileName) => {
     setSelectedFile(prev => ({
       ...prev,
+<<<<<<< HEAD
       [jobId]: prev[jobId] === fileName ? null : fileName
     }));
   };
@@ -104,10 +134,24 @@ const AnalysisReports = () => {
     try {
       const response = await fetch(`http://localhost:8000/aws-job-download/${jobId}`);
 
+=======
+      [jobId]: fileName
+    }));
+  };
+
+  const handleDownload = async (jobId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/aws-job-download/${jobId}`);
+      
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
       if (!response.ok) {
         throw new Error('Failed to download job');
       }
 
+<<<<<<< HEAD
+=======
+      // Create blob and download
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -123,6 +167,7 @@ const AnalysisReports = () => {
     }
   };
 
+<<<<<<< HEAD
   const toggleSection = (jobId, sectionIndex) => {
     const key = `${jobId}-${sectionIndex}`;
     setExpandedSections(prev => ({
@@ -136,20 +181,30 @@ const AnalysisReports = () => {
     setSearchTerm(prev => ({ ...prev, [key]: term }));
   };
 
+=======
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
   const getStatusDisplay = (status) => {
     switch (status) {
       case 'SUBMITTED':
       case 'PENDING':
         return {
+<<<<<<< HEAD
           icon: <Clock size={18} />,
           gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           bg: 'rgba(102, 126, 234, 0.08)',
           text: 'Pending',
           pulse: true
+=======
+          icon: <Clock size={16} />,
+          color: '#3b82f6',
+          bg: 'rgba(59, 130, 246, 0.1)',
+          text: 'Pending'
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         };
       case 'PROCESSING':
       case 'IN_PROGRESS':
         return {
+<<<<<<< HEAD
           icon: <Activity size={18} className="animate-spin" />,
           gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           bg: 'rgba(240, 147, 251, 0.08)',
@@ -179,6 +234,33 @@ const AnalysisReports = () => {
           bg: 'rgba(168, 237, 234, 0.08)',
           text: status || 'Unknown',
           pulse: false
+=======
+          icon: <Loader2 size={16} className="animate-spin" />,
+          color: '#8b5cf6',
+          bg: 'rgba(139, 92, 246, 0.1)',
+          text: 'Processing'
+        };
+      case 'COMPLETED':
+        return {
+          icon: <CheckCircle size={16} />,
+          color: '#10b981',
+          bg: 'rgba(16, 185, 129, 0.1)',
+          text: 'Completed'
+        };
+      case 'FAILED':
+        return {
+          icon: <AlertTriangle size={16} />,
+          color: '#ef4444',
+          bg: 'rgba(239, 68, 68, 0.1)',
+          text: 'Failed'
+        };
+      default:
+        return {
+          icon: <Clock size={16} />,
+          color: '#6b7280',
+          bg: 'rgba(107, 114, 128, 0.1)',
+          text: status || 'Unknown'
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         };
     }
   };
@@ -199,6 +281,7 @@ const AnalysisReports = () => {
     }
   };
 
+<<<<<<< HEAD
   const parseVulnerabilities = (content) => {
     const vulnBlocks = content.split(/\[\d+\]\s+VULNERABLE/).slice(1);
     return vulnBlocks.map((block, index) => {
@@ -334,12 +417,227 @@ const AnalysisReports = () => {
     if (fileName.toLowerCase().includes('repair')) return <Code size={18} />;
     if (fileName.toLowerCase().includes('report')) return <FileText size={18} />;
     return <Terminal size={18} />;
+=======
+  const styles = {
+    container: {
+      padding: 24
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 24
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: '#ffffff',
+      margin: 0
+    },
+    refreshButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '10px 16px',
+      backgroundColor: '#374151',
+      color: '#d1d5db',
+      border: 'none',
+      borderRadius: 8,
+      cursor: 'pointer',
+      fontSize: 14,
+      fontWeight: 500,
+      transition: 'all 0.2s'
+    },
+    loadingContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 60,
+      color: '#9ca3af'
+    },
+    errorContainer: {
+      padding: 20,
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      border: '1px solid #ef4444',
+      borderRadius: 8,
+      color: '#fca5a5',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    },
+    emptyState: {
+      textAlign: 'center',
+      padding: 60,
+      color: '#9ca3af'
+    },
+    emptyIcon: {
+      fontSize: 64,
+      marginBottom: 16,
+      opacity: 0.5
+    },
+    jobList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12
+    },
+    jobCard: {
+      backgroundColor: '#1f2937',
+      borderRadius: 12,
+      border: '1px solid #374151',
+      padding: 20,
+      transition: 'all 0.2s',
+      cursor: 'pointer'
+    },
+    jobCardHover: {
+      borderColor: '#4b5563'
+    },
+    jobHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 12
+    },
+    jobInfo: {
+      flex: 1
+    },
+    jobId: {
+      fontSize: 14,
+      fontFamily: 'monospace',
+      color: '#60a5fa',
+      marginBottom: 6,
+      fontWeight: 600
+    },
+    jobUrl: {
+      fontSize: 13,
+      color: '#d1d5db',
+      marginBottom: 8,
+      wordBreak: 'break-all'
+    },
+    jobMeta: {
+      display: 'flex',
+      gap: 16,
+      fontSize: 12,
+      color: '#9ca3af'
+    },
+    statusBadge: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '6px 12px',
+      borderRadius: 6,
+      fontSize: 13,
+      fontWeight: 500
+    },
+    downloadButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '8px 16px',
+      backgroundColor: '#2563eb',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 13,
+      fontWeight: 500,
+      transition: 'all 0.2s'
+    },
+    downloadButtonDisabled: {
+      backgroundColor: '#4b5563',
+      cursor: 'not-allowed',
+      opacity: 0.6
+    },
+    expandButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      background: 'none',
+      border: 'none',
+      color: '#9ca3af',
+      cursor: 'pointer',
+      fontSize: 13,
+      padding: '4px 8px',
+      borderRadius: 4,
+      transition: 'all 0.2s'
+    },
+    expandedContent: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTop: '1px solid #374151'
+    },
+    fileList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+      marginBottom: 16
+    },
+    fileItem: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 12px',
+      backgroundColor: '#111827',
+      borderRadius: 6,
+      border: '1px solid #374151',
+      cursor: 'pointer',
+      transition: 'all 0.2s'
+    },
+    fileItemActive: {
+      backgroundColor: '#1e3a5f',
+      borderColor: '#2563eb'
+    },
+    fileName: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      fontSize: 13,
+      color: '#d1d5db'
+    },
+    filePreview: {
+      backgroundColor: '#111827',
+      border: '1px solid #374151',
+      borderRadius: 8,
+      padding: 16,
+      maxHeight: 400,
+      overflow: 'auto'
+    },
+    fileContent: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      color: '#d1d5db',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word'
+    },
+    loadingBox: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 40,
+      color: '#9ca3af'
+    },
+    viewButton: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '6px 12px',
+      backgroundColor: 'transparent',
+      color: '#60a5fa',
+      border: '1px solid #2563eb',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: 12,
+      fontWeight: 500,
+      transition: 'all 0.2s'
+    }
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
   };
 
   if (loading) {
     return (
       <div style={styles.container}>
         <div style={styles.loadingContainer}>
+<<<<<<< HEAD
           <div style={styles.loadingSpinner}>
             <Loader2 size={56} className="animate-spin" />
           </div>
@@ -347,6 +645,10 @@ const AnalysisReports = () => {
           <div style={styles.loadingBar}>
             <div style={styles.loadingBarFill} className="loading-bar-animation" />
           </div>
+=======
+          <Loader2 size={48} className="animate-spin" style={{ marginBottom: 16, color: '#60a5fa' }} />
+          <p>Loading analysis reports...</p>
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         </div>
       </div>
     );
@@ -356,6 +658,7 @@ const AnalysisReports = () => {
     return (
       <div style={styles.container}>
         <div style={styles.errorContainer}>
+<<<<<<< HEAD
           <div style={styles.errorIcon}>
             <AlertTriangle size={32} />
           </div>
@@ -366,6 +669,11 @@ const AnalysisReports = () => {
               <RefreshCw size={16} />
               Retry Connection
             </button>
+=======
+          <AlertTriangle size={24} />
+          <div>
+            <strong>Error loading reports:</strong> {error}
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
           </div>
         </div>
       </div>
@@ -374,6 +682,7 @@ const AnalysisReports = () => {
 
   return (
     <div style={styles.container}>
+<<<<<<< HEAD
       {/* Header Section */}
       <div style={styles.header}>
         <div style={styles.headerContent}>
@@ -387,10 +696,15 @@ const AnalysisReports = () => {
             </p>
           </div>
         </div>
+=======
+      <div style={styles.header}>
+        <h2 style={styles.title}>Analysis Reports</h2>
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         <button
           style={styles.refreshButton}
           onClick={fetchJobs}
           disabled={refreshing}
+<<<<<<< HEAD
           className="refresh-button"
         >
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
@@ -477,12 +791,34 @@ const AnalysisReports = () => {
             const jobData = jobResults[job.job_id];
             const results = jobData?.files || {};
             const originalFiles = jobData?.original_files || {};
+=======
+        >
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
+
+      {jobs.length === 0 ? (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>📋</div>
+          <h3 style={{ color: '#d1d5db', marginBottom: 8 }}>No Reports Yet</h3>
+          <p>AWS analysis reports will appear here once jobs are completed</p>
+        </div>
+      ) : (
+        <div style={styles.jobList}>
+          {jobs.map((job) => {
+            const statusDisplay = getStatusDisplay(job.status);
+            const canDownload = job.status === 'COMPLETED';
+            const isExpanded = expandedJobs[job.job_id];
+            const results = jobResults[job.job_id];
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
             const isLoadingResults = loadingResults[job.job_id];
             const selectedFileName = selectedFile[job.job_id];
 
             return (
               <div
                 key={job.job_id}
+<<<<<<< HEAD
                 style={{
                   ...styles.jobCard,
                   animationDelay: `${jobIndex * 0.1}s`
@@ -491,10 +827,22 @@ const AnalysisReports = () => {
               >
                 {/* Job Card Header */}
                 <div
+=======
+                style={styles.jobCard}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#4b5563';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#374151';
+                }}
+              >
+                <div 
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                   style={styles.jobHeader}
                   onClick={() => toggleJobExpansion(job.job_id, job.status)}
                 >
                   <div style={styles.jobInfo}>
+<<<<<<< HEAD
                     <div style={styles.jobTitleRow}>
                       <button style={styles.expandButton}>
                         {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
@@ -545,23 +893,77 @@ const AnalysisReports = () => {
                     style={styles.jobActions}
                     onClick={(e) => e.stopPropagation()}
                   >
+=======
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <button style={styles.expandButton}>
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      </button>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: '#60a5fa' }}>
+                        {job.repo_name || 'Unknown Repository'}
+                      </div>
+                    </div>
+                    <div style={styles.jobId}>
+                      Job ID: {job.job_id}
+                    </div>
+                    {job.git_url && (
+                      <div style={styles.jobUrl}>
+                        <FileText size={14} style={{ display: 'inline', marginRight: 6 }} />
+                        {job.git_url}
+                      </div>
+                    )}
+                    <div style={styles.jobMeta}>
+                      <span>📅 {formatDate(job.display_time || job.timestamp)}</span>
+                      {job.branch && <span>🌿 {job.branch}</span>}
+                    </div>
+                  </div>
+                  <div 
+                    style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div
+                      style={{
+                        ...styles.statusBadge,
+                        backgroundColor: statusDisplay.bg,
+                        color: statusDisplay.color
+                      }}
+                    >
+                      {statusDisplay.icon}
+                      {statusDisplay.text}
+                    </div>
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                     {canDownload && (
                       <button
                         style={styles.downloadButton}
                         onClick={() => handleDownload(job.job_id)}
+<<<<<<< HEAD
                         className="action-button"
                       >
                         <Download size={16} />
                         <span>Download Report</span>
+=======
+                        title="Download ZIP file"
+                      >
+                        <Download size={14} />
+                        Download
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                       </button>
                     )}
                     {!canDownload && job.status !== 'FAILED' && (
                       <button
+<<<<<<< HEAD
                         style={styles.downloadButtonDisabled}
                         disabled
                       >
                         <Clock size={16} />
                         <span>Processing...</span>
+=======
+                        style={{ ...styles.downloadButton, ...styles.downloadButtonDisabled }}
+                        disabled
+                        title="Job not completed yet"
+                      >
+                        <Download size={14} />
+                        Download
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                       </button>
                     )}
                   </div>
@@ -569,17 +971,31 @@ const AnalysisReports = () => {
 
                 {/* Error Display */}
                 {job.error && (
+<<<<<<< HEAD
                   <div style={styles.jobError}>
                     <AlertTriangle size={20} />
                     <div>
                       <div style={styles.errorLabel}>Error Details</div>
                       <div style={styles.errorDetail}>{job.error}</div>
                     </div>
+=======
+                  <div style={{
+                    marginTop: 12,
+                    padding: 10,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid #991b1b',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    color: '#fca5a5'
+                  }}>
+                    ❌ {job.error}
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                   </div>
                 )}
 
                 {/* Expanded Content */}
                 {isExpanded && (
+<<<<<<< HEAD
                   <div style={styles.expandedContent} className="expanded-animate">
                     {job.status !== 'COMPLETED' && (
                       <div style={styles.pendingBox}>
@@ -587,11 +1003,18 @@ const AnalysisReports = () => {
                         <p style={styles.pendingText}>
                           Analysis in progress. Results will be available upon completion.
                         </p>
+=======
+                  <div style={styles.expandedContent}>
+                    {job.status !== 'COMPLETED' && (
+                      <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af' }}>
+                        📦 Results will be available once the job is completed
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                       </div>
                     )}
 
                     {job.status === 'COMPLETED' && isLoadingResults && (
                       <div style={styles.loadingBox}>
+<<<<<<< HEAD
                         <Loader2 size={40} className="animate-spin" />
                         <p style={styles.loadingBoxText}>Loading analysis results...</p>
                       </div>
@@ -628,10 +1051,50 @@ const AnalysisReports = () => {
                                 <span>{fileName}</span>
                                 {isActive && <div style={styles.fileTabIndicator} />}
                               </button>
+=======
+                        <Loader2 size={32} className="animate-spin" style={{ marginRight: 12 }} />
+                        Loading results...
+                      </div>
+                    )}
+
+                    {job.status === 'COMPLETED' && !isLoadingResults && results && !results.error && (
+                      <div>
+                        <h4 style={{ color: '#d1d5db', marginBottom: 12, fontSize: 14 }}>
+                          📄 Analysis Files ({Object.keys(results).length})
+                        </h4>
+                        <div style={styles.fileList}>
+                          {Object.keys(results).map((fileName) => {
+                            const isActive = selectedFileName === fileName;
+                            return (
+                              <div
+                                key={fileName}
+                                style={{
+                                  ...styles.fileItem,
+                                  ...(isActive ? styles.fileItemActive : {})
+                                }}
+                                onClick={() => handleFileSelect(job.job_id, fileName)}
+                              >
+                                <div style={styles.fileName}>
+                                  <FileText size={16} />
+                                  {fileName}
+                                </div>
+                                <button
+                                  style={styles.viewButton}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFileSelect(job.job_id, fileName);
+                                  }}
+                                >
+                                  <Eye size={14} />
+                                  {isActive ? 'Hide' : 'View'}
+                                </button>
+                              </div>
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                             );
                           })}
                         </div>
 
+<<<<<<< HEAD
                         {/* File Content Display */}
                         {selectedFileName && results[selectedFileName] && (
                           <div style={styles.fileViewer} className="file-viewer-animate">
@@ -783,12 +1246,38 @@ const AnalysisReports = () => {
                                   <pre style={styles.preformatted}>{results[selectedFileName]}</pre>
                                 </div>
                               )}
+=======
+                        {/* File Preview */}
+                        {selectedFileName && results[selectedFileName] && (
+                          <div style={styles.filePreview}>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center',
+                              marginBottom: 12,
+                              paddingBottom: 12,
+                              borderBottom: '1px solid #374151'
+                            }}>
+                              <h5 style={{ color: '#60a5fa', margin: 0, fontSize: 13 }}>
+                                {selectedFileName}
+                              </h5>
+                              <button
+                                style={{ ...styles.viewButton, fontSize: 11 }}
+                                onClick={() => setSelectedFile(prev => ({ ...prev, [job.job_id]: null }))}
+                              >
+                                Close Preview
+                              </button>
+                            </div>
+                            <div style={styles.fileContent}>
+                              {results[selectedFileName]}
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                             </div>
                           </div>
                         )}
                       </div>
                     )}
 
+<<<<<<< HEAD
                     {job.status === 'COMPLETED' && jobData?.error && (
                       <div style={styles.resultsError}>
                         <AlertTriangle size={24} />
@@ -796,6 +1285,18 @@ const AnalysisReports = () => {
                           <div style={styles.resultsErrorTitle}>Failed to Load Results</div>
                           <div style={styles.resultsErrorMessage}>{jobData.error}</div>
                         </div>
+=======
+                    {job.status === 'COMPLETED' && results && results.error && (
+                      <div style={{
+                        padding: 20,
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid #991b1b',
+                        borderRadius: 6,
+                        textAlign: 'center',
+                        color: '#fca5a5'
+                      }}>
+                        ❌ Failed to load results: {results.error}
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
                       </div>
                     )}
                   </div>
@@ -807,13 +1308,17 @@ const AnalysisReports = () => {
       )}
 
       <style>{`
+<<<<<<< HEAD
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
         
+=======
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
         
+<<<<<<< HEAD
         @keyframes slideIn {
           from {
             opacity: 0;
@@ -845,10 +1350,13 @@ const AnalysisReports = () => {
           100% { transform: translateX(400%); }
         }
         
+=======
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         .animate-spin {
           animation: spin 1s linear infinite;
         }
         
+<<<<<<< HEAD
         .job-card-animate {
           animation: slideIn 0.5s ease-out forwards;
           opacity: 0;
@@ -928,12 +1436,22 @@ const AnalysisReports = () => {
         
         ::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+=======
+        button:hover:not(:disabled) {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+        
+        button:active:not(:disabled) {
+          transform: translateY(0);
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
         }
       `}</style>
     </div>
   );
 };
 
+<<<<<<< HEAD
 const styles = {
   container: {
     padding: '32px',
@@ -1625,4 +2143,6 @@ const styles = {
   }
 };
 
+=======
+>>>>>>> 4ec7a8270a152535913106d264c51b238fa3d053
 export default AnalysisReports;
