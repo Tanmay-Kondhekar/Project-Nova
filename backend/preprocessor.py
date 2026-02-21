@@ -19,7 +19,11 @@ class ProjectPreprocessor:
         '.tsx': 'TypeScript/React',
         '.java': 'Java',
         '.cpp': 'C++',
+        '.cc': 'C++',
+        '.cxx': 'C++',
         '.c': 'C',
+        '.h': 'C/C++',
+        '.hpp': 'C++',
         '.cs': 'C#',
         '.go': 'Go',
         '.rs': 'Rust',
@@ -58,6 +62,10 @@ class ProjectPreprocessor:
         r'.*_test\.go$',
         r'test_.*\.rb$',
         r'.*_spec\.rb$',
+        r'.*_test\.cpp$',
+        r'.*_test\.c$',
+        r'test_.*\.cpp$',
+        r'test_.*\.c$',
     ]
     
     # CI/CD config files

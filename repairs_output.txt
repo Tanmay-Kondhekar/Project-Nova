@@ -1,0 +1,114 @@
+
+============================================================
+VULNERABILITY 1
+File     : testing.cpp
+Function : authenticate
+
+Repaired Code:
+bool authenticate(char *user_input) {
+    char password[16];
+    strncpy(password, user_input, sizeof(password) - 1);
+    password[sizeof(password) - 1] = '\0';
+    return strcmp(password, "my_secret_password") == 0;
+}
+
+============================================================
+VULNERABILITY 2
+File     : testing.cpp
+Function : increment_counter
+
+Repaired Code:
+void increment_counter() {
+    for (int i = 0; i < 1000; i++) {
+        atomic_fetch_add_explicit(&shared_counter, 1, memory_order_relaxed);
+    }
+}
+
+============================================================
+VULNERABILITY 3
+File     : testing.cpp
+Function : write_to_buffer
+
+Repaired Code:
+void write_to_buffer(char *buf, int index, char value) {
+    if (index >= 0 && index < strlen(buf)) {
+        buf[index] = value;
+    }
+}
+
+============================================================
+VULNERABILITY 4
+File     : testing.cpp
+Function : allocate_data
+
+Repaired Code:
+char* allocate_data(int size) {
+    if (size < 8) return NULL;
+    char* data = (char*)malloc(size);
+    if (!data) return NULL;
+    strncpy(data, "DEFAULT", size - 1);
+    data[size - 1] = '\0';
+    return data;
+}
+
+============================================================
+VULNERABILITY 5
+File     : testing.cpp
+Function : process_request
+
+Repaired Code:
+void process_request(char *input) {
+    char buffer[32];
+    strncpy(buffer, input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+}
+
+============================================================
+VULNERABILITY 6
+File     : testing.cpp
+Function : main
+
+Repaired Code:
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: ./vulnerable_system <input>\n");
+        return 1;
+    }
+
+    if (!authenticate(argv[1])) {
+        printf("Authentication failed\n");
+        return 1;
+    }
+
+    char *data = allocate_data(4);
+    if (!data) {
+        printf("Allocation failed\n");
+        return 1;
+    }
+
+    printf("%s\n", data);
+    free(data);
+    return 0;
+}
+
+============================================================
+VULNERABILITY 7
+File     : testing.cpp
+Function : free_data
+
+Repaired Code:
+void free_data(char *data) {
+    if (data) {
+        free(data);
+    }
+}
+
+============================================================
+VULNERABILITY 8
+File     : testing.cpp
+Function : unsafe_log
+
+Repaired Code:
+void unsafe_log(const char *msg) {
+    printf("%s", msg);
+}

@@ -275,16 +275,23 @@ async def download_aws_job_zip(job_id: str):
 
 class CodeRequest(BaseModel):
     code: str
+    language: Optional[str] = "python"
 
 @app.post("/cfg")
 async def generate_cfg(request: CodeRequest):
     """
     Accepts code and returns a control flow graph (CFG) as JSON.
+    Supports Python, C, and C++.
+    
+    Args:
+        code: Source code to analyze
+        language: Language of the code ('python', 'c', 'cpp'). Default: 'python'
     """
     try:
-        cfg = build_cfg_json(request.code)
+        cfg = build_cfg_json(request.code, language=request.language)
         return JSONResponse(content=cfg)
     except Exception as e:
+        logger.error(f"CFG generation error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/")
@@ -358,14 +365,28 @@ async def preprocess_project(
         # Run preprocessing
         results = preprocessor.analyze_project(project_path)
         
+        # Auto-detect primary language for CFG
+        detected_language = 'python'  # default
+        if 'languages' in results and results['languages']:
+            langs = results['languages']
+            # Priority: C++ > C > Python > others
+            if 'C++' in langs:
+                detected_language = 'cpp'
+            elif 'C' in langs:
+                detected_language = 'c'
+            elif 'Python' in langs:
+                detected_language = 'python'
+        
+        logger.info(f"Detected primary language: {detected_language}")
 
         # Run AST analysis
         ast_results = ast_analyzer.analyze_codebase(Path(project_path))
         results["ast_analysis"] = ast_results
 
-        # Run project-wide CFG analysis (Python only for now)
-        cfg = build_project_cfg_json(Path(project_path))
+        # Run project-wide CFG analysis with detected language
+        cfg = build_project_cfg_json(Path(project_path), language=detected_language)
         results["control_flow_graph"] = cfg
+        results["detected_language"] = detected_language
 
         return JSONResponse(content=results)
         

@@ -5,14 +5,37 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import tokenize
 import io
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Import C/C++ parser
+try:
+    from cpp_parser import CppParser
+    CPP_PARSER_AVAILABLE = True
+except ImportError:
+    logger.warning("C/C++ parser not available. Install tree-sitter dependencies.")
+    CPP_PARSER_AVAILABLE = False
 
 class ASTAnalyzer:
     """
     Advanced code analysis: tokenization, AST generation, and semantic analysis
+    Supports Python, JavaScript, C, and C++
     """
     
     def __init__(self):
-        self.supported_extensions = {'.py', '.js', '.jsx', '.ts', '.tsx'}
+        self.supported_extensions = {'.py', '.js', '.jsx', '.ts', '.tsx', '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp'}
+        
+        # Initialize C/C++ parser if available
+        if CPP_PARSER_AVAILABLE:
+            try:
+                self.cpp_parser = CppParser()
+                logger.info("C/C++ parser initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize C/C++ parser: {e}")
+                self.cpp_parser = None
+        else:
+            self.cpp_parser = None
     
     def analyze_codebase(self, project_path: Path, max_files: int = 50) -> Dict:
         """
@@ -137,6 +160,11 @@ class ASTAnalyzer:
                 result.update(self._analyze_python(content))
             elif extension in ['.js', '.jsx', '.ts', '.tsx']:
                 result.update(self._analyze_javascript(content))
+            elif extension == '.c':
+                result.update(self._analyze_c(content))
+            elif extension in ['.cpp', '.cc', '.cxx', '.hpp', '.h']:
+                # For .h files, try C++ first (as they could be either)
+                result.update(self._analyze_cpp(content))
             
             return result
             
@@ -150,7 +178,13 @@ class ASTAnalyzer:
             '.js': 'JavaScript',
             '.jsx': 'JavaScript/React',
             '.ts': 'TypeScript',
-            '.tsx': 'TypeScript/React'
+            '.tsx': 'TypeScript/React',
+            '.c': 'C',
+            '.cpp': 'C++',
+            '.cc': 'C++',
+            '.cxx': 'C++',
+            '.h': 'C/C++ Header',
+            '.hpp': 'C++ Header'
         }
         return mapping.get(extension, 'Unknown')
     
@@ -411,3 +445,137 @@ class ASTAnalyzer:
             return "OPERATOR"
         else:
             return "IDENTIFIER"
+    
+    def _analyze_c(self, content: str) -> Dict:
+        """
+        Deep analysis of C code using tree-sitter
+        """
+        result = {
+            "tokens": [],
+            "token_count": 0,
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "complexity": 0
+        }
+        
+        if not self.cpp_parser:
+            result["error"] = "C/C++ parser not available"
+            return result
+        
+        try:
+            tree = self.cpp_parser.parse(content, is_cpp=False)
+            
+            # Extract functions
+            functions = self.cpp_parser.extract_functions(tree, content, is_cpp=False)
+            for func in functions:
+                result["functions"].append({
+                    "name": func['name'],
+                    "line": func['line'],
+                    "args": func.get('parameters', []),
+                    "return_type": func.get('return_type', 'void'),
+                    "is_static": func.get('is_static', False)
+                })
+            
+            # Extract includes (treated as imports)
+            includes = self.cpp_parser.extract_includes(tree, content)
+            for inc in includes:
+                result["imports"].append({
+                    "module": inc['path'],
+                    "type": "system_include" if inc['is_system'] else "local_include",
+                    "line": inc['line']
+                })
+            
+            # Simple token count (approximate)
+            result["token_count"] = len(content.split())
+            
+            # Calculate complexity (count control flow keywords)
+            complexity_keywords = ['if', 'else', 'for', 'while', 'switch', 'case', 'do']
+            for keyword in complexity_keywords:
+                result["complexity"] += len(re.findall(r'\b' + keyword + r'\b', content))
+        
+        except Exception as e:
+            result["error"] = str(e)
+            logger.error(f"Error analyzing C code: {e}")
+        
+        return result
+    
+    def _analyze_cpp(self, content: str) -> Dict:
+        """
+        Deep analysis of C++ code using tree-sitter
+        """
+        result = {
+            "tokens": [],
+            "token_count": 0,
+            "functions": [],
+            "classes": [],
+            "imports": [],
+            "namespaces": [],
+            "complexity": 0
+        }
+        
+        if not self.cpp_parser:
+            result["error"] = "C/C++ parser not available"
+            return result
+        
+        try:
+            tree = self.cpp_parser.parse(content, is_cpp=True)
+            
+            # Extract functions
+            functions = self.cpp_parser.extract_functions(tree, content, is_cpp=True)
+            for func in functions:
+                result["functions"].append({
+                    "name": func['name'],
+                    "line": func['line'],
+                    "args": func.get('parameters', []),
+                    "return_type": func.get('return_type', 'void'),
+                    "is_method": func.get('is_method', False),
+                    "class_name": func.get('class_name'),
+                    "namespace": func.get('namespace'),
+                    "is_static": func.get('is_static', False),
+                    "is_template": func.get('is_template', False)
+                })
+            
+            # Extract classes
+            classes = self.cpp_parser.extract_classes(tree, content)
+            for cls in classes:
+                result["classes"].append({
+                    "name": cls['name'],
+                    "line": cls['line'],
+                    "methods": cls.get('methods', []),
+                    "bases": cls.get('base_classes', []),
+                    "namespace": cls.get('namespace'),
+                    "is_template": cls.get('is_template', False)
+                })
+            
+            # Extract namespaces
+            namespaces = self.cpp_parser.extract_namespaces(tree, content)
+            for ns in namespaces:
+                result["namespaces"].append({
+                    "name": ns['name'],
+                    "line": ns['line'],
+                    "nested_level": ns.get('nested_level', 0)
+                })
+            
+            # Extract includes (treated as imports)
+            includes = self.cpp_parser.extract_includes(tree, content)
+            for inc in includes:
+                result["imports"].append({
+                    "module": inc['path'],
+                    "type": "system_include" if inc['is_system'] else "local_include",
+                    "line": inc['line']
+                })
+            
+            # Simple token count (approximate)
+            result["token_count"] = len(content.split())
+            
+            # Calculate complexity (count control flow keywords)
+            complexity_keywords = ['if', 'else', 'for', 'while', 'switch', 'case', 'do', 'catch']
+            for keyword in complexity_keywords:
+                result["complexity"] += len(re.findall(r'\b' + keyword + r'\b', content))
+        
+        except Exception as e:
+            result["error"] = str(e)
+            logger.error(f"Error analyzing C++ code: {e}")
+        
+        return result

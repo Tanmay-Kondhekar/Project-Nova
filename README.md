@@ -37,10 +37,12 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 ✅ Scans for security-relevant files  
 ✅ Generates project structure visualization  
 ✅ **NEW**: Tokenizes source code (removes comments, extracts tokens)  
-✅ **NEW**: Generates Abstract Syntax Trees (AST) for Python  
-✅ **NEW**: Performs semantic analysis (functions, classes, imports)  
+✅ **NEW**: Generates Abstract Syntax Trees (AST) for Python, C, and C++  
+✅ **NEW**: Performs semantic analysis (functions, classes, imports, namespaces, templates)  
 ✅ **NEW**: Creates semantic graphs showing code relationships  
 ✅ **NEW**: Calculates code complexity metrics  
+✅ **NEW**: Generates Control Flow Graphs (CFG) for Python, C, and C++  
+✅ **NEW**: Auto-detects primary language for project-wide CFG generation  
 ✅ Displays results in a beautiful, tabbed UI  
 
 ---
@@ -48,7 +50,7 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 ## ✨ Features
 
 ### 🔍 Project Analysis
-- **Multi-language detection**: Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, PHP, C++, C#, Kotlin, Scala, Swift
+- **Multi-language detection**: Python, JavaScript, TypeScript, Java, Go, Rust, Ruby, PHP, C, C++, C#, Kotlin, Scala, Swift
 - **Framework identification**: React, Next.js, Vue.js, Angular, Django, Flask, FastAPI, Spring Boot, Express.js, and more
 - **Dependency extraction** from:
   - Python: `requirements.txt`, `Pipfile`, `pyproject.toml`
@@ -64,19 +66,27 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
   - Breaks code into tokens (keywords, operators, identifiers)
   - Removes comments automatically
   - Shows first 50 tokens per file
-- **AST Generation** (Python)
-  - Full Abstract Syntax Trees
+- **AST Generation**
+  - **Python**: Full Abstract Syntax Trees using built-in `ast` module
+  - **C/C++**: Complete AST using tree-sitter parser
   - Up to 3 levels deep
   - Includes line numbers and node types
 - **Semantic Extraction**
-  - Functions with arguments and decorators
-  - Classes with methods and base classes
-  - Import statements and dependencies
+  - **Functions**: Name, arguments, decorators (Python), return types (C/C++)
+  - **Classes**: Name, methods, base classes, member variables
+  - **Namespaces** (C++): Nested namespace support
+  - **Templates** (C++): Template declarations and specializations
+  - **Imports/Includes**: Module dependencies, header files
+  - **Call Graph**: Function call relationships
   - Cyclomatic complexity calculation
 - **JavaScript/TypeScript Support**
   - Basic tokenization
   - Regex-based function/class detection
   - Import extraction
+- **Control Flow Graph (CFG)**
+  - Single-file CFG generation for Python, C, and C++
+  - Project-wide CFG with auto-detected primary language
+  - Node and edge visualization for control flow paths
 
 ### 📊 Semantic Graph (NEW!)
 - Hierarchical visualization of code structure
@@ -120,6 +130,9 @@ This platform is being built in stages to create a comprehensive AI-assisted tes
 - **python-multipart** - File upload handling
 - **ast** - Built-in Python AST parser
 - **tokenize** - Built-in Python tokenizer
+- **tree-sitter** - Universal parser for C/C++
+- **tree-sitter-c** - C language bindings for tree-sitter
+- **tree-sitter-cpp** - C++ language bindings for tree-sitter
 
 ### Frontend
 - **React 18** - UI library
@@ -219,7 +232,10 @@ testing-platform/
 ├── backend/
 │   ├── main.py              # FastAPI server
 │   ├── preprocessor.py      # Project analysis engine
-│   ├── ast_analyzer.py      # Code tokenization & AST generation
+│   ├── ast_analyzer.py      # Code tokenization & AST generation (Python, C, C++)
+│   ├── cpp_parser.py        # C/C++ parser using tree-sitter
+│   ├── cfg_generator.py     # Control Flow Graph generation (single file)
+│   ├── project_cfg.py       # Project-wide CFG generation
 │   └── requirements.txt     # Python dependencies
 │
 ├── frontend/
@@ -266,6 +282,7 @@ Analyzes a software project and returns metadata.
     ".env files may not be ignored by git"
   ],
   "project_structure_tree": "project/\n├── manage.py\n├── ...",
+  "detected_language": "python",  // Auto-detected primary language (cpp, c, or python)
   "ast_analysis": {
     "total_files_analyzed": 25,
     "files": [
@@ -319,6 +336,24 @@ Analyzes a software project and returns metadata.
         {"from": "file_0", "to": "func_2", "type": "contains"}
       ]
     }
+  },
+  "control_flow_graph": {
+    "nodes": [
+      {
+        "id": "node_0",
+        "label": "def main()",
+        "type": "function_def",
+        "line": 10,
+        "file": "main.py"
+      }
+    ],
+    "edges": [
+      {
+        "from": "node_0",
+        "to": "node_1",
+        "label": "next"
+      }
+    ]
   }
 }
 ```
@@ -327,6 +362,53 @@ Analyzes a software project and returns metadata.
 - `200`: Success
 - `400`: Invalid input (bad file type, invalid URL)
 - `408`: Git clone timeout
+- `500`: Server error
+
+### `POST /cfg`
+
+Generates a Control Flow Graph (CFG) for source code.
+
+**Request:**
+- Method: `POST`
+- Content-Type: `application/json`
+- Body:
+  ```json
+  {
+    "code": "source code string",
+    "language": "python"  // Options: "python", "c", "cpp"
+  }
+  ```
+
+**Response:**
+```json
+{
+  "nodes": [
+    {
+      "id": "node_0",
+      "label": "def process_data(x)",
+      "type": "function_def",
+      "line": 5
+    },
+    {
+      "id": "node_1",
+      "label": "if x > 0",
+      "type": "if_statement",
+      "line": 6
+    }
+  ],
+  "edges": [
+    {
+      "from": "node_0",
+      "to": "node_1",
+      "label": "next"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200`: Success
+- `400`: Invalid code or unsupported language
 - `500`: Server error
 
 ### `GET /`
@@ -348,21 +430,35 @@ Health check endpoint.
 - Breaks source code into atomic tokens
 - Removes comments and whitespace
 - Classifies tokens (keywords, operators, identifiers, etc.)
+- Supports Python, JavaScript, TypeScript, C, and C++
 
 ### AST (Abstract Syntax Tree)
-- Full parse tree for Python files
+- **Python**: Full parse tree using built-in `ast` module
+- **C/C++**: Complete AST using tree-sitter universal parser
 - Hierarchical code structure
 - Line number tracking
+- Node type classification
 
 ### Semantic Analysis
-- **Functions**: Name, arguments, decorators, complexity
-- **Classes**: Name, methods, inheritance
-- **Imports**: Module dependencies
+- **Functions**: Name, arguments, decorators, complexity, return types
+- **Classes**: Name, methods, inheritance, member variables, access specifiers
+- **Namespaces** (C++): Full nested namespace support
+- **Templates** (C++): Template declarations and instantiations
+- **Imports/Includes**: Module dependencies and header files
+- **Call Graph**: Function invocation relationships
 - **Complexity**: Cyclomatic complexity score
+
+### Control Flow Graph (CFG)
+- **Single-File CFG**: Generate CFG for individual source files
+- **Project-Wide CFG**: Aggregate CFG across entire project
+- **Auto-Detection**: Automatically detects primary language (C++ > C > Python priority)
+- **Supported Languages**: Python, C, C++
+- **Visualizations**: Node and edge diagrams showing execution paths
+- **Control Structures**: Handles conditionals, loops, switches, jumps, and function calls
 
 ### Semantic Graph
 - Visualizes code relationships
-- Nodes: Files, Classes, Functions
+- Nodes: Files, Classes, Functions, Namespaces
 - Edges: Contains relationships
 - Hierarchical structure
 
@@ -372,27 +468,37 @@ Health check endpoint.
 
 ## 🌐 Supported Languages
 
-| Language | Dependency File | Test Pattern | Tokenization | AST | Semantic Analysis |
-|----------|----------------|--------------|--------------|-----|-------------------|
-| Python | requirements.txt, Pipfile | test_*.py, *_test.py | ✅ Full | ✅ Full | ✅ Full |
-| JavaScript | package.json | *.test.js, *.spec.js | ✅ Basic | ❌ | ✅ Regex |
-| TypeScript | package.json | *.test.ts, *.spec.ts | ✅ Basic | ❌ | ✅ Regex |
-| Java | pom.xml, build.gradle | *Test.java, Test*.java | ❌ | ❌ | ❌ |
-| Go | go.mod | *_test.go | ❌ | ❌ | ❌ |
-| Rust | Cargo.toml | - | ❌ | ❌ | ❌ |
-| Ruby | Gemfile | test_*.rb, *_spec.rb | ❌ | ❌ | ❌ |
-| PHP | composer.json | - | ❌ | ❌ | ❌ |
-| C++ | - | - | ❌ | ❌ | ❌ |
-| C# | - | - | ❌ | ❌ | ❌ |
-| Kotlin | - | - | ❌ | ❌ | ❌ |
-| Scala | - | - | ❌ | ❌ | ❌ |
-| Swift | - | - | ❌ | ❌ | ❌ |
+| Language | Dependency File | Test Pattern | Tokenization | AST | Semantic Analysis | CFG |
+|----------|----------------|--------------|--------------|-----|-------------------|-----|
+| Python | requirements.txt, Pipfile | test_*.py, *_test.py | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| C | - | test_*.c, *_test.c | ✅ Basic | ✅ Full | ✅ Full | ✅ Full |
+| C++ | - | test_*.cpp, *_test.cpp | ✅ Basic | ✅ Full | ✅ Full | ✅ Full |
+| JavaScript | package.json | *.test.js, *.spec.js | ✅ Basic | ❌ | ✅ Regex | ❌ |
+| TypeScript | package.json | *.test.ts, *.spec.ts | ✅ Basic | ❌ | ✅ Regex | ❌ |
+| Java | pom.xml, build.gradle | *Test.java, Test*.java | ❌ | ❌ | ❌ | ❌ |
+| Go | go.mod | *_test.go | ❌ | ❌ | ❌ | ❌ |
+| Rust | Cargo.toml | - | ❌ | ❌ | ❌ | ❌ |
+| Ruby | Gemfile | test_*.rb, *_spec.rb | ❌ | ❌ | ❌ | ❌ |
+| PHP | composer.json | - | ❌ | ❌ | ❌ | ❌ |
+| C# | - | - | ❌ | ❌ | ❌ | ❌ |
+| Kotlin | - | - | ❌ | ❌ | ❌ | ❌ |
+| Scala | - | - | ❌ | ❌ | ❌ | ❌ |
+| Swift | - | - | ❌ | ❌ | ❌ | ❌ |
 
 **Legend:**
 - ✅ Full: Complete support with native parsers
 - ✅ Basic: Simple tokenization
 - ✅ Regex: Pattern-matching based
 - ❌: Not yet supported
+
+**C/C++ Capabilities:**
+- **Functions**: Name, parameters, return type, visibility
+- **Classes/Structs**: Member variables, methods, inheritance, access specifiers
+- **Namespaces**: Nested namespace support (C++)
+- **Templates**: Template declarations and specializations (C++)
+- **Includes**: Header file dependencies
+- **Call Graph**: Function invocation relationships
+- **CFG**: Complete control flow analysis for conditionals, loops, and jumps
 
 ---
 
@@ -403,10 +509,13 @@ Health check endpoint.
 - Language and framework detection
 - Dependency analysis
 - Security file detection
-- **Tokenization and AST generation**
-- **Semantic analysis (functions, classes, imports)**
+- **Tokenization and AST generation (Python, C, C++)**
+- **Semantic analysis (functions, classes, imports, namespaces, templates)**
 - **Code complexity calculation**
 - **Semantic graph visualization**
+- **Control Flow Graph (CFG) generation**
+- **Multi-language support (Python, JavaScript/TypeScript, C, C++)**
+- **Auto-detection of primary language for project-wide analysis**
 - UI with 3 tabs (Overview, Code Analysis, Semantic Graph)
 
 ### 🔄 Stage 2 - Testing & Security (COMING SOON)
@@ -442,6 +551,12 @@ https://github.com/pallets/flask
 ```bash
 # React example
 https://github.com/facebook/create-react-app
+```
+
+**C/C++:**
+```bash
+# Small C++ project
+https://github.com/nlohmann/json
 ```
 
 **Create Your Own Test Project:**

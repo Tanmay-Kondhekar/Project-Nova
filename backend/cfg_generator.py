@@ -1,8 +1,16 @@
 import ast
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Import C/C++ parser
+try:
+    from cpp_parser import CppParser
+    CPP_PARSER_AVAILABLE = True
+except ImportError:
+    logger.warning("C/C++ parser not available")
+    CPP_PARSER_AVAILABLE = False
 
 class ImprovedCFGGenerator:
     """
@@ -267,12 +275,233 @@ class ImprovedCFGGenerator:
         }
 
 
-def build_cfg_json(source_code: str, include_private: bool = False) -> Dict:
+class CppCFGGenerator:
+    """
+    Control Flow Graph generator for C/C++ code using tree-sitter
+    """
+    
+    def __init__(self, include_private: bool = False, is_cpp: bool = True):
+        self.include_private = include_private
+        self.is_cpp = is_cpp
+        self.user_functions = set()
+        self.calls = {}
+        self.errors = []
+        self.function_metadata = {}
+        
+        if not CPP_PARSER_AVAILABLE:
+            self.errors.append("C/C++ parser not available")
+            self.parser = None
+        else:
+            try:
+                self.parser = CppParser()
+            except Exception as e:
+                self.errors.append(f"Failed to initialize C/C++ parser: {str(e)}")
+                self.parser = None
+    
+    def build_cfg_json(self, source_code: str) -> Dict:
+        """
+        Returns a JSON-serializable dict representing the control flow graph for C/C++
+        """
+        if not self.parser:
+            return self._empty_result()
+        
+        try:
+            # Parse the code
+            tree = self.parser.parse(source_code, is_cpp=self.is_cpp)
+            
+            # Extract functions and build call graph
+            call_graph = self.parser.build_call_graph(tree, source_code, is_cpp=self.is_cpp)
+            
+            # Extract function metadata
+            functions = self.parser.extract_functions(tree, source_code, is_cpp=self.is_cpp)
+            
+            # If C++, also extract classes for context
+            classes_info = {}
+            if self.is_cpp:
+                classes = self.parser.extract_classes(tree, source_code)
+                for cls in classes:
+                    classes_info[cls['name']] = cls
+            
+            # Build function metadata
+            for func in functions:
+                func_name = func['name']
+                
+                # For C++ methods, use ClassName::methodName as key
+                if func.get('class_name') and self.is_cpp:
+                    full_name = f"{func['class_name']}::{func_name}"
+                    self.function_metadata[full_name] = func
+                    self.user_functions.add(full_name)
+                else:
+                    self.function_metadata[func_name] = func
+                    self.user_functions.add(func_name)
+                
+                # Skip private functions if flag is not set
+                if not self.include_private:
+                    # In C++, skip private methods (starting with _)
+                    # In C, skip static functions if desired
+                    if func_name.startswith('_'):
+                        continue
+            
+            # Use the call graph from parser
+            self.calls = call_graph
+            
+            if not self.calls:
+                return self._empty_result()
+            
+            # Build the graph
+            return self._build_graph()
+            
+        except Exception as e:
+            logger.error(f"Error generating C/C++ CFG: {e}")
+            self.errors.append(f"Error: {str(e)}")
+            return self._empty_result()
+    
+    def _build_graph(self) -> Dict:
+        """Build the visualization graph"""
+        all_function_names = set(self.calls.keys())
+        
+        if not all_function_names:
+            return self._empty_result()
+        
+        # Determine which functions are connected
+        connected_functions = set()
+        all_called_functions = set()
+        
+        for func, targets in self.calls.items():
+            user_targets = {t for t in targets if t in all_function_names}
+            if user_targets:
+                connected_functions.add(func)
+                connected_functions.update(user_targets)
+            all_called_functions.update(targets)
+        
+        # Find external references (called but not defined)
+        external_functions = all_called_functions - all_function_names
+        # Filter out obvious builtins and standard library functions
+        builtins_to_exclude = {'printf', 'scanf', 'malloc', 'free', 'strlen', 'strcpy', 'strcmp',
+                              'cout', 'cin', 'endl', 'std', 'new', 'delete'}
+        external_functions = {f for f in external_functions 
+                            if f not in builtins_to_exclude and not f.startswith('std::')}
+        
+        # Build nodes
+        nodes = []
+        for func_name in sorted(all_function_names):
+            metadata = self.function_metadata.get(func_name, {})
+            is_connected = func_name in connected_functions
+            
+            node = {
+                "id": func_name,
+                "label": func_name,
+                "connected": is_connected,
+                "line": metadata.get('line'),
+                "return_type": metadata.get('return_type'),
+                "is_method": metadata.get('is_method', False),
+                "class_name": metadata.get('class_name'),
+                "namespace": metadata.get('namespace'),
+                "is_static": metadata.get('is_static', False),
+                "is_template": metadata.get('is_template', False)
+            }
+            nodes.append(node)
+        
+        # Add some external references
+        for func_name in sorted(list(external_functions)[:20]):
+            nodes.append({
+                "id": func_name,
+                "label": func_name,
+                "connected": True,
+                "external": True
+            })
+        
+        # Build edges
+        edges = []
+        edge_set = set()
+        node_ids = {n['id'] for n in nodes}
+        
+        for src, targets in self.calls.items():
+            if src in node_ids:
+                for tgt in targets:
+                    if tgt in node_ids:
+                        edge_key = (src, tgt)
+                        if edge_key not in edge_set:
+                            edges.append({
+                                "from": src,
+                                "to": tgt
+                            })
+                            edge_set.add(edge_key)
+        
+        # Calculate stats
+        isolated_functions = all_function_names - connected_functions
+        
+        stats = {
+            "total_functions": len(all_function_names),
+            "displayed_functions": len(nodes),
+            "total_calls": len(edges),
+            "connected_functions": len(connected_functions),
+            "isolated_functions": len(isolated_functions),
+            "external_references": len(external_functions),
+            "static_functions": sum(1 for m in self.function_metadata.values() if m.get('is_static', False)),
+            "template_functions": sum(1 for m in self.function_metadata.values() if m.get('is_template', False)),
+            "methods": sum(1 for m in self.function_metadata.values() if m.get('is_method', False))
+        }
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "stats": stats,
+            "errors": self.errors if self.errors else None,
+            "language": "C++" if self.is_cpp else "C"
+        }
+    
+    def _empty_result(self) -> Dict:
+        """Return empty result with errors"""
+        return {
+            "nodes": [],
+            "edges": [],
+            "stats": {
+                "total_functions": 0,
+                "total_calls": 0,
+                "connected_functions": 0,
+                "isolated_functions": 0
+            },
+            "errors": self.errors if self.errors else ["No functions found"],
+            "language": "C++" if self.is_cpp else "C"
+        }
+
+
+def build_cfg_json(source_code: str, include_private: bool = False, language: Optional[str] = None) -> Dict:
     """
     Main entry point for CFG generation.
+    Supports Python, C, and C++.
+    
+    Args:
+        source_code: Source code to analyze
+        include_private: Whether to include private functions
+        language: Language of the code ('python', 'c', 'cpp'). If None, defaults to Python.
+    
+    Returns:
+        CFG JSON dict with nodes, edges, and stats
     """
-    generator = ImprovedCFGGenerator(include_private=include_private)
-    return generator.build_cfg_json(source_code)
+    # Auto-detect language if not specified
+    if language is None:
+        language = 'python'
+    
+    language = language.lower()
+    
+    if language == 'python':
+        generator = ImprovedCFGGenerator(include_private=include_private)
+        return generator.build_cfg_json(source_code)
+    elif language == 'c':
+        generator = CppCFGGenerator(include_private=include_private, is_cpp=False)
+        return generator.build_cfg_json(source_code)
+    elif language in ['cpp', 'c++', 'cxx']:
+        generator = CppCFGGenerator(include_private=include_private, is_cpp=True)
+        return generator.build_cfg_json(source_code)
+    else:
+        return {
+            "nodes": [],
+            "edges": [],
+            "stats": {"total_functions": 0},
+            "errors": [f"Unsupported language: {language}"]
+        }
 
 
 # Example usage and testing
